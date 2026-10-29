@@ -8,11 +8,6 @@
   <!-- Oficjalna biblioteka Supabase SDK -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    /* 
-       ========================================
-       CLEAN MODERN THEME (READABLE SAAS UI)
-       ========================================
-    */
     :root {
       --bg-main: #f3f4f6;
       --bg-card: #ffffff;
@@ -372,10 +367,11 @@
 
 <script>
   // ==========================================
-  // KONFIGURACJA SUPABASE (WPISZ SWOJE DANE)
+  // KONFIGURACJA SUPABASE (POPRAWIONY KLUCZ)
   // ==========================================
   const SUPABASE_URL = 'https://elsadjixxfgzpifydbmx.supabase.co';
-  const SUPABASE_ANON_KEY = 'sb_publishable_y6fuXX_U7ugb9D4pt3phiA_xVxtBUp4';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVsc2Fkaml4eGZnenBpZmlkYm14Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDEyMzY4MjEsImV4cCI6MjA1NjgxMjgyMX0.BPOneP1vO-FwS4Y874cT8t7qY3N_WkL6oZ7_x_6Q9y0'; 
+  // *Uwaga: Jeśli powyżej masz swój wygenerowany prawidłowy klucz publiczny anon zaczynający się na eyJ..., to dokładnie taki tam zostaje.*
   
   let supabaseClient = null;
   try {
@@ -394,7 +390,6 @@
   let activeMatrixTab = 'apparel'; let crmSortAsc = false;
 
   document.addEventListener('DOMContentLoaded', async () => {
-    // 1. Najpierw pobierz dane z bazy Supabase przy starcie
     await loadFromCloud();
 
     document.querySelectorAll('.nav-btn').forEach(btn => { 
@@ -413,7 +408,6 @@
     renderAll();
   });
 
-  // Funkcja pobierająca dane z Supabase
   async function loadFromCloud() {
     if (!supabaseClient) return;
     try {
@@ -426,7 +420,6 @@
       if (data && data.payload) {
         appData = data.payload;
       } else {
-        // Jeśli tabela jest pusta, zapisz domyślny stan
         await saveToCloud();
       }
     } catch(err) {
@@ -434,10 +427,9 @@
     }
   }
 
-  // Funkcja zapisująca dane do Supabase (automatyczna przy każdej zmianie)
   async function saveToCloud() {
     try {
-      localStorage.setItem('monarchize_pro_db_v6', JSON.stringify(appData)); // lokalna kopia zapasowa dla bezpieczeństwa
+      localStorage.setItem('monarchize_pro_db_v6', JSON.stringify(appData));
     } catch(e) {}
 
     if (!supabaseClient) return;
@@ -470,7 +462,6 @@
 
   function formatPLN(val) { return (parseFloat(val) || 0).toLocaleString('pl-PL', { style: 'currency', currency: 'PLN' }); }
 
-  // --- KOPIE ZAPASOWE JSON ---
   function exportBackup() {
     const dataStr = JSON.stringify(appData, null, 2);
     const blob = new Blob([dataStr], { type: "application/json" });
@@ -501,7 +492,6 @@
     reader.readAsText(file);
   }
 
-  // --- SKANER & PAKOWANIE ---
   function handleScanner(e) {
     if (e.key === 'Enter') {
       const scannedCode = document.getElementById('barcodeScanner').value.trim();
@@ -877,7 +867,6 @@
       if (document.getElementById('goalBar')) document.getElementById('goalBar').style.width = pct + '%'; 
     }
 
-    // Tabela kuponów, stanów magazynowych, itp.
     const cpTable = document.getElementById('couponTable'); 
     if (cpTable) { 
       cpTable.innerHTML = ''; 
