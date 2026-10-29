@@ -490,8 +490,9 @@
         if (importedData && typeof importedData === 'object') {
           if(confirm("Nadpisać dane w chmurze zawartością pliku?")) {
             appData = { ...appData, ...importedData };
-            saveData(); updateUIFields();
-          </div> alert("✅ Przywrócono pomyślnie!");
+            saveData(); 
+            updateUIFields();
+            alert("✅ Przywrócono pomyślnie!");
           }
         }
       } catch (err) { alert("❌ Błąd pliku."); }
