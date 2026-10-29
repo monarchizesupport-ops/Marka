@@ -3,8 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MONARCHIZE ERP - Clean Edition Pro</title>
+  <title>MONARCHIZE ERP - Cloud Edition Pro</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Oficjalna biblioteka Supabase SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     /* 
        ========================================
@@ -182,7 +184,7 @@
   <div class="brand-container">
     <div class="crown-icon">♔</div>
     <h1 class="brand-logo">MONARCHIZE</h1>
-    <div class="brand-sub">ERP System</div>
+    <div class="brand-sub">ERP System (Cloud)</div>
   </div>
 
   <div class="nav-list">
@@ -207,17 +209,10 @@
     <button class="nav-btn" data-tab="manual" style="background: rgba(255,255,255,0.05); color: #fff;">📜 Księga Zasad (Instrukcja)</button>
     <button class="nav-btn" data-tab="notes">📝 Notatki</button>
 
-    <!-- NOWA SEKCJA BEZPIECZEŃSTWA -->
+    <!-- BEZPIECZEŃSTWO I CHMURA -->
     <div class="nav-section-title" style="margin-top: 25px;">🛡️ Bezpieczeństwo</div>
-    
-    <button class="nav-btn" onclick="exportBackup()" style="color: #60a5fa; border: 1px dashed #3b82f6;">
-      💾 Pobierz Kopię (Zapisz)
-    </button>
-    
-    <label class="nav-btn" style="color: #34d399; border: 1px dashed #10b981; margin-bottom: 20px; cursor: pointer;">
-      📂 Wgraj Kopię (Odtwórz)
-      <input type="file" class="hidden-input" accept=".json" onchange="importBackup(event)">
-    </label>
+    <button class="nav-btn" onclick="exportBackup()" style="color: #60a5fa; border: 1px dashed #3b82f6;">💾 Pobierz Kopię (JSON)</button>
+    <label class="nav-btn" style="color: #34d399; border: 1px dashed #10b981; margin-bottom: 20px; cursor: pointer;">📂 Wgraj Kopię<input type="file" class="hidden-input" accept=".json" onchange="importBackup(event)"></label>
 
     <div style="margin-top: auto;">
       <button class="btn-delete" style="width:100%; border:1px dashed #ef4444; background:transparent;" onclick="resetSystemData()">Zniszcz Dane (Reset)</button>
@@ -300,6 +295,7 @@
           <div class="form-group"><label class="form-label">Kod Rabatowy:</label><input type="text" id="sCoupon" list="couponList" oninput="updateLiveOrderCost()" autocomplete="off"><datalist id="couponList"></datalist></div>
           <div class="form-group"><label class="form-label">Płatność:</label><select id="sGateway" onchange="updateLiveOrderCost()"><option value="">-- Wybierz --</option></select></div>
           <div class="form-group"><label class="form-label">Suma (Automatyczna):</label><input type="text" id="sPrice" readonly></div>
+          <div class="form-group"><label class="form-label">Tracking / Kurier:</label><input type="text" id="sTracking" placeholder="np. InPost"></div>
         </div>
         <div class="pack-container"><label class="form-label">Wybierz Produkty:</label><div id="orderProductsBox" class="pack-grid"></div></div>
         <div class="calc-breakdown">
@@ -349,152 +345,59 @@
       <h2>Stany Magazynowe</h2>
       <div class="sub-tabs"><button class="sub-tab-btn active" id="btnSubApparel" onclick="switchMatrixTab('apparel')">ODZIEŻ</button><button class="sub-tab-btn" id="btnSubSupplies" onclick="switchMatrixTab('supplies')">PAKOWANIE</button></div>
       
-      <form id="formApparel" onsubmit="addMatrixStock(event, 'apparel')"><input type="hidden" id="editingApparelId" value=""><div style="display:grid; grid-template-columns: 2fr 1fr 1fr 1.5fr auto auto; gap:10px; align-items:end;"><div class="form-group" style="margin:0;"><label class="form-label">Nazwa:</label><input type="text" id="mProd" required></div><div class="form-group" style="margin:0;"><label class="form-label">Rozmiar:</label><select id="mSize"><option value="XS">XS</option><option value="S">S</option><option value="M">M</option><option value="L">L</option><option value="XL">XL</option><option value="XXL">XXL</option><option value="UNI">UNI</option></select></div><div class="form-group" style="margin:0;"><label class="form-label">Ilość:</label><input type="number" id="mQty" min="0" required oninput="calcApparelUnit()"></div><div class="form-group" style="margin:0;"><label class="form-label">Koszt faktury całościowy (zł):</label><input type="number" id="mCostTotal" step="0.01" min="0" required oninput="calcApparelUnit()"><small id="apparelUnitInfo" style="margin-top:4px; font-weight:600; color:var(--text-muted);">0,00 zł / szt.</small></div><button type="submit" id="btnSubmitApparel" class="btn-primary" style="padding:10px; border-radius:8px;">DODAJ</button><button type="button" id="btnCancelApparelEdit" class="btn-import" style="display:none; margin:0; padding:10px; border-radius:8px;" onclick="cancelMatrixEdit('apparel')">X</button></div></form>
+      <form id="formApparel" onsubmit="addMatrixStock(event, 'apparel')"><input type="hidden" id="editingApparelId" value=""><div style="display:grid; grid-template-columns: 2fr 1fr 1fr 1.5fr auto auto; gap:10px; align-items:end;"><div class="form-group" style="margin:0;"><label class="form-label">Nazwa:</label><input type="text" id="mProd" required></div><div class="form-group" style="margin:0;"><label class="form-label">Rozmiar:</label><select id="mSize"><option value="XS">XS</option><option value="S">S</option><option value="M">M</option><option value="L">L</option><option value="XL">XL</option><option value="XXL">XXL</option><option value="UNI">UNI</option></select></div><div class="form-group" style="margin:0;"><label class="form-label">Ilość:</label><input type="number" id="mQty" min="0" required oninput="calcApparelUnit()"></div><div class="form-group" style="margin:0;"><label class="form-label">Koszt całościowy (zł):</label><input type="number" id="mCostTotal" step="0.01" min="0" required oninput="calcApparelUnit()"><small id="apparelUnitInfo" style="margin-top:4px; font-weight:600; color:var(--text-muted);">0,00 zł / szt.</small></div><button type="submit" id="btnSubmitApparel" class="btn-primary" style="padding:10px; border-radius:8px;">DODAJ</button><button type="button" id="btnCancelApparelEdit" class="btn-import" style="display:none; margin:0; padding:10px; border-radius:8px;" onclick="cancelMatrixEdit('apparel')">X</button></div></form>
       
-      <form id="formSupplies" onsubmit="addMatrixStock(event, 'supplies')" style="display:none;"><input type="hidden" id="editingSupplyId" value=""><div style="display:grid; grid-template-columns: 2fr 1fr 1fr 1.5fr auto auto; gap:10px; align-items:end;"><div class="form-group" style="margin:0;"><label class="form-label">Nazwa:</label><input type="text" id="mSupplyProd" required></div><div class="form-group" style="margin:0;"><label class="form-label">Jednostka (np. karton):</label><input type="text" id="mSupplyUnit" required></div><div class="form-group" style="margin:0;"><label class="form-label">Ilość:</label><input type="number" id="mSupplyQty" min="0" required oninput="calcSupplyUnit()"></div><div class="form-group" style="margin:0;"><label class="form-label">Koszt faktury całościowy (zł):</label><input type="number" id="mSupplyCostTotal" step="0.01" min="0" required oninput="calcSupplyUnit()"><small id="supplyUnitInfo" style="margin-top:4px; font-weight:600; color:var(--text-muted);">0,00 zł / jedn.</small></div><button type="submit" id="btnSubmitSupply" class="btn-primary" style="padding:10px; border-radius:8px;">DODAJ</button><button type="button" id="btnCancelSupplyEdit" class="btn-import" style="display:none; margin:0; padding:10px; border-radius:8px;" onclick="cancelMatrixEdit('supplies')">X</button></div></form>
+      <form id="formSupplies" onsubmit="addMatrixStock(event, 'supplies')" style="display:none;"><input type="hidden" id="editingSupplyId" value=""><div style="display:grid; grid-template-columns: 2fr 1fr 1fr 1.5fr auto auto; gap:10px; align-items:end;"><div class="form-group" style="margin:0;"><label class="form-label">Nazwa:</label><input type="text" id="mSupplyProd" required></div><div class="form-group" style="margin:0;"><label class="form-label">Jednostka:</label><input type="text" id="mSupplyUnit" required></div><div class="form-group" style="margin:0;"><label class="form-label">Ilość:</label><input type="number" id="mSupplyQty" min="0" required oninput="calcSupplyUnit()"></div><div class="form-group" style="margin:0;"><label class="form-label">Koszt całościowy (zł):</label><input type="number" id="mSupplyCostTotal" step="0.01" min="0" required oninput="calcSupplyUnit()"><small id="supplyUnitInfo" style="margin-top:4px; font-weight:600; color:var(--text-muted);">0,00 zł / jedn.</small></div><button type="submit" id="btnSubmitSupply" class="btn-primary" style="padding:10px; border-radius:8px;">DODAJ</button><button type="button" id="btnCancelSupplyEdit" class="btn-import" style="display:none; margin:0; padding:10px; border-radius:8px;" onclick="cancelMatrixEdit('supplies')">X</button></div></form>
       
       <table><thead><tr><th>Przedmiot</th><th>Rozmiar/Jedn.</th><th>Stan</th><th>Koszt Szt.</th><th>Status</th><th>Akcja</th></tr></thead><tbody id="matrixTable"></tbody></table>
     </div>
   </div>
 
-  <div id="suppliers" class="tab-content"><div class="card"><h2>Zleć Produkcję</h2><form onsubmit="addProduction(event)"><div style="display:grid; grid-template-columns: 2fr 1fr 1.5fr 1fr auto; gap:10px; align-items:end;"><div class="form-group" style="margin:0;"><label class="form-label">Odzież z Magazynu:</label><select id="pApparel" required><option value="">- Wybierz -</option></select></div><div class="form-group" style="margin:0;"><label class="form-label">Ilość szt.:</label><input type="number" id="pQty" min="1" required></div><div class="form-group" style="margin:0;"><label class="form-label">Szwalnia:</label><select id="pSupplier" required><option value="">- Wybierz -</option></select></div><div class="form-group" style="margin:0;"><label class="form-label">Koszt całościowy:</label><input type="number" id="pCost" step="0.01" min="0" required></div><button type="submit" class="btn-primary" style="padding:10px; border-radius:8px;">ZLEĆ</button></div></form><table style="margin-top:20px;"><thead><tr><th>Zlecono</th><th>Szwalnia</th><th>Koszt</th><th>Status</th><th>Akcja</th></tr></thead><tbody id="productionTable"></tbody></table></div><div class="card"><h2>Baza Szwalni</h2><form onsubmit="addSupplier(event)"><div style="display:grid; grid-template-columns: 2fr 1.5fr 1fr auto; gap:10px; align-items:end;"><input type="text" id="supName" placeholder="Nazwa" required><input type="text" id="supContact" placeholder="Kontakt (Telefon/Email)" required><input type="number" id="supLead" placeholder="Czas (dni)" required><button type="submit" class="btn-primary" style="padding:10px; border-radius:8px;">ZAPISZ</button></div></form><table><thead><tr><th>Nazwa</th><th>Kontakt</th><th>Czas Realizacji</th><th>Akcja</th></tr></thead><tbody id="supplierTable"></tbody></table></div></div>
-  <div id="coupons" class="tab-content"><div class="card"><h2>Kody i Twórcy (Afiliacja)</h2><form onsubmit="addCoupon(event)"><div style="display:grid; grid-template-columns: 1fr 1fr 1.5fr 1fr auto; gap:10px; align-items:end;"><div class="form-group" style="margin:0;"><label class="form-label">Kod rabatowy</label><input type="text" id="cpCode" placeholder="np. KOWAL10" required></div><div class="form-group" style="margin:0;"><label class="form-label">Zniżka dla klienta (%)</label><input type="number" id="cpDiscount" step="any" min="0" required></div><div class="form-group" style="margin:0;"><label class="form-label">Nazwa Twórcy</label><input type="text" id="cpOwner" required></div><div class="form-group" style="margin:0;"><label class="form-label">Prowizja twórcy (%)</label><input type="number" id="cpComm" step="any" min="0" value="0" required></div><button type="submit" class="btn-primary" style="padding:10px; border-radius:8px;">DODAJ</button></div></form><table><thead><tr><th>Kod i Twórca</th><th>Parametry</th><th>Wygenerował Obrotu</th><th>Do Wypłaty Twórcy</th><th>Akcja</th></tr></thead><tbody id="couponTable"></tbody></table></div></div>
-  <div id="gateways" class="tab-content"><div class="card"><h2>Bramki Płatności (Koszty Operacyjne)</h2><form onsubmit="addGateway(event)"><div style="display:grid; grid-template-columns: 2fr 1fr 1fr auto; gap:10px; align-items:end;"><div class="form-group" style="margin:0;"><label class="form-label">Nazwa Formy</label><input type="text" id="gwName" required></div><div class="form-group" style="margin:0;"><label class="form-label">Prowizja (%)</label><input type="number" id="gwPercent" step="any" min="0" required></div><div class="form-group" style="margin:0;"><label class="form-label">Koszt stały (zł)</label><input type="number" id="gwFixed" step="any" min="0" required></div><button type="submit" class="btn-primary" style="padding:10px; border-radius:8px;">DODAJ</button></div></form><table><thead><tr><th>Nazwa</th><th>Prowizja %</th><th>Koszt Stały</th><th>Akcja</th></tr></thead><tbody id="gatewayTable"></tbody></table></div></div>
-  <div id="budget" class="tab-content"><div class="card"><h2>Skarbiec (Cash Flow)</h2><div style="margin-bottom: 20px;"><label class="form-label">Początkowy Kapitał na start (zł):</label><input type="number" id="startBudgetInput" step="0.01" onchange="updateStartBudget(this.value)" style="max-width:200px;"></div><div class="grid"><div class="stat-box"><h3>Kapitał Startowy</h3><p id="bStart">0,00 zł</p></div><div class="stat-box" style="background:#f0fdf4; border-color:#bbf7d0;"><h3>Wpływy ze Sprzedaży</h3><p id="bInflow" style="color:var(--success);">0,00 zł</p></div><div class="stat-box" style="background:#fef2f2; border-color:#fecaca;"><h3>Wydatki (Prowizje, Materiały)</h3><p id="bOutflow" style="color:var(--danger);">0,00 zł</p></div><div class="stat-box" style="border:2px solid var(--primary);"><h3>Faktyczny Stan Kasy</h3><p id="bCurrent" style="color:var(--primary);">0,00 zł</p></div></div></div><div class="card"><h2>Dodaj Ręczną Transakcję (np. Reklamy FB)</h2><form onsubmit="addBudgetTx(event)"><div style="display:grid; grid-template-columns: 2fr 1.5fr 1fr auto; gap:10px; align-items:end;"><div class="form-group" style="margin:0;"><label class="form-label">Tytuł transakcji:</label><input type="text" id="btTitle" required></div><div class="form-group" style="margin:0;"><label class="form-label">Typ:</label><select id="btType"><option value="out">Zwykły Wydatek (-)</option><option value="ads">Marketing / Influencer / Ads (-)</option><option value="in">Wpływ Zewnętrzny (+)</option></select></div><div class="form-group" style="margin:0;"><label class="form-label">Kwota (zł):</label><input type="number" id="btAmount" step="0.01" required></div><button type="submit" class="btn-primary" style="padding:10px; border-radius:8px;">DODAJ</button></div></form><table><thead><tr><th>Tytuł</th><th>Typ</th><th>Kwota</th><th>Akcja</th></tr></thead><tbody id="budgetTxTable"></tbody></table></div></div>
-  <div id="goalTracker" class="tab-content"><div class="card"><h2>Wyznacz Cel Finansowy</h2><form onsubmit="saveGoal(event)"><div style="display:grid; grid-template-columns: 2fr 1fr auto; gap:10px; align-items:end;"><div class="form-group" style="margin:0;"><label class="form-label">Nazwa Celu (np. Pierwsze biuro)</label><input type="text" id="gName" required></div><div class="form-group" style="margin:0;"><label class="form-label">Docelowy Przychód (zł)</label><input type="number" id="gTarget" required></div><button type="submit" class="btn-primary" style="padding:10px; border-radius:8px;">USTAW CEL</button></div></form></div></div>
-  <div id="notes" class="tab-content"><div class="card"><h2>Notatki (Brudnopis)</h2><textarea id="noteText" style="width:100%; height:350px;" oninput="saveNotes(this.value)" placeholder="Zapisz tutaj pomysły na nowe dropy..."></textarea></div></div>
+  <div id="suppliers" class="tab-content"><div class="card"><h2>Zleć Produkcję</h2><form onsubmit="addProduction(event)"><div style="display:grid; grid-template-columns: 2fr 1fr 1.5fr 1fr auto; gap:10px; align-items:end;"><div class="form-group" style="margin:0;"><label class="form-label">Odzież z Magazynu:</label><select id="pApparel" required><option value="">- Wybierz -</option></select></div><div class="form-group" style="margin:0;"><label class="form-label">Ilość szt.:</label><input type="number" id="pQty" min="1" required></div><div class="form-group" style="margin:0;"><label class="form-label">Szwalnia:</label><select id="pSupplier" required><option value="">- Wybierz -</option></select></div><div class="form-group" style="margin:0;"><label class="form-label">Koszt całościowy:</label><input type="number" id="pCost" step="0.01" min="0" required></div><button type="submit" class="btn-primary" style="padding:10px; border-radius:8px;">ZLEĆ</button></div></form><table style="margin-top:20px;"><thead><tr><th>Zlecono</th><th>Szwalnia</th><th>Koszt</th><th>Status</th><th>Akcja</th></tr></thead><tbody id="productionTable"></tbody></table></div><div class="card"><h2>Baza Szwalni</h2><form onsubmit="addSupplier(event)"><div style="display:grid; grid-template-columns: 2fr 1.5fr 1fr auto; gap:10px; align-items:end;"><input type="text" id="supName" placeholder="Nazwa" required><input type="text" id="supContact" placeholder="Kontakt" required><input type="number" id="supLead" placeholder="Czas (dni)" required><button type="submit" class="btn-primary" style="padding:10px; border-radius:8px;">ZAPISZ</button></div></form><table><thead><tr><th>Nazwa</th><th>Kontakt</th><th>Czas Realizacji</th><th>Akcja</th></tr></thead><tbody id="supplierTable"></tbody></table></div></div>
+  <div id="coupons" class="tab-content"><div class="card"><h2>Kody i Twórcy (Afiliacja)</h2><form onsubmit="addCoupon(event)"><div style="display:grid; grid-template-columns: 1fr 1fr 1.5fr 1fr auto; gap:10px; align-items:end;"><div class="form-group" style="margin:0;"><label class="form-label">Kod rabatowy</label><input type="text" id="cpCode" placeholder="np. KOWAL10" required></div><div class="form-group" style="margin:0;"><label class="form-label">Zniżka (%)</label><input type="number" id="cpDiscount" step="any" min="0" required></div><div class="form-group" style="margin:0;"><label class="form-label">Twórca</label><input type="text" id="cpOwner" required></div><div class="form-group" style="margin:0;"><label class="form-label">Prowizja (%)</label><input type="number" id="cpComm" step="any" min="0" value="0" required></div><button type="submit" class="btn-primary" style="padding:10px; border-radius:8px;">DODAJ</button></div></form><table><thead><tr><th>Kod i Twórca</th><th>Parametry</th><th>Wygenerował Obrotu</th><th>Do Wypłaty Twórcy</th><th>Akcja</th></tr></thead><tbody id="couponTable"></tbody></table></div></div>
+  <div id="gateways" class="tab-content"><div class="card"><h2>Bramki Płatności</h2><form onsubmit="addGateway(event)"><div style="display:grid; grid-template-columns: 2fr 1fr 1fr auto; gap:10px; align-items:end;"><div class="form-group" style="margin:0;"><label class="form-label">Nazwa Formy</label><input type="text" id="gwName" required></div><div class="form-group" style="margin:0;"><label class="form-label">Prowizja (%)</label><input type="number" id="gwPercent" step="any" min="0" required></div><div class="form-group" style="margin:0;"><label class="form-label">Koszt stały (zł)</label><input type="number" id="gwFixed" step="any" min="0" required></div><button type="submit" class="btn-primary" style="padding:10px; border-radius:8px;">DODAJ</button></div></form><table><thead><tr><th>Nazwa</th><th>Prowizja %</th><th>Koszt Stały</th><th>Akcja</th></tr></thead><tbody id="gatewayTable"></tbody></table></div></div>
+  <div id="budget" class="tab-content"><div class="card"><h2>Skarbiec (Cash Flow)</h2><div style="margin-bottom: 20px;"><label class="form-label">Początkowy Kapitał na start (zł):</label><input type="number" id="startBudgetInput" step="0.01" onchange="updateStartBudget(this.value)" style="max-width:200px;"></div><div class="grid"><div class="stat-box"><h3>Kapitał Startowy</h3><p id="bStart">0,00 zł</p></div><div class="stat-box" style="background:#f0fdf4; border-color:#bbf7d0;"><h3>Wpływy</h3><p id="bInflow" style="color:var(--success);">0,00 zł</p></div><div class="stat-box" style="background:#fef2f2; border-color:#fecaca;"><h3>Wydatki</h3><p id="bOutflow" style="color:var(--danger);">0,00 zł</p></div><div class="stat-box" style="border:2px solid var(--primary);"><h3>Faktyczny Stan Kasy</h3><p id="bCurrent" style="color:var(--primary);">0,00 zł</p></div></div></div><div class="card"><h2>Dodaj Ręczną Transakcję</h2><form onsubmit="addBudgetTx(event)"><div style="display:grid; grid-template-columns: 2fr 1.5fr 1fr auto; gap:10px; align-items:end;"><div class="form-group" style="margin:0;"><label class="form-label">Tytuł:</label><input type="text" id="btTitle" required></div><div class="form-group" style="margin:0;"><label class="form-label">Typ:</label><select id="btType"><option value="out">Zwykły Wydatek (-)</option><option value="ads">Marketing / Ads (-)</option><option value="in">Wpływ (+)</option></select></div><div class="form-group" style="margin:0;"><label class="form-label">Kwota (zł):</label><input type="number" id="btAmount" step="0.01" required></div><button type="submit" class="btn-primary" style="padding:10px; border-radius:8px;">DODAJ</button></div></form><table><thead><tr><th>Tytuł</th><th>Typ</th><th>Kwota</th><th>Akcja</th></tr></thead><tbody id="budgetTxTable"></tbody></table></div></div>
+  <div id="goalTracker" class="tab-content"><div class="card"><h2>Wyznacz Cel Finansowy</h2><form onsubmit="saveGoal(event)"><div style="display:grid; grid-template-columns: 2fr 1fr auto; gap:10px; align-items:end;"><div class="form-group" style="margin:0;"><label class="form-label">Nazwa Celu</label><input type="text" id="gName" required></div><div class="form-group" style="margin:0;"><label class="form-label">Docelowy Przychód (zł)</label><input type="number" id="gTarget" required></div><button type="submit" class="btn-primary" style="padding:10px; border-radius:8px;">USTAW CEL</button></div></form></div></div>
+  <div id="notes" class="tab-content"><div class="card"><h2>Notatki (Brudnopis)</h2><textarea id="noteText" style="width:100%; height:350px;" oninput="saveNotes(this.value)" placeholder="Zapisz tutaj pomysły..."></textarea></div></div>
 
-  <!-- INSTRUKCJA (MANUAL) -->
+  <!-- INSTRUKCJA -->
   <div id="manual" class="tab-content">
     <div class="card">
-      <h2>📜 KSIĘGA ZASAD - PEŁNA INSTRUKCJA SYSTEMU</h2>
-      <p style="color:var(--text-muted); margin-bottom: 30px; font-size: 14px;">Witaj w swoim centrum dowodzenia. Ta sekcja przypomni Ci, do czego służy każda funkcja i jak zautomatyzować procesy w Twojej marce.</p>
-
-      <div class="manual-section">
-        <h3>1. Kopie Zapasowe (NOWOŚĆ)</h3>
-        <p><strong>Do czego służy:</strong> Chroni Twoje dane przed ich utratą (np. w przypadku wyczyszczenia historii przeglądarki).</p>
-        <ul>
-          <li><strong>Pobierz Kopię (Zapisz):</strong> Kliknij na koniec dnia. Przeglądarka pobierze mały plik <code>.json</code> z całą Twoją firmą. Trzymaj to bezpiecznie na dysku.</li>
-          <li><strong>Wgraj Kopię (Odtwórz):</strong> Pozwala otworzyć ten system na nowym komputerze, wybrać plik z dysku i od razu wznowić pracę.</li>
-        </ul>
-      </div>
-
-      <div class="manual-section">
-        <h3>2. Dashboard & KPI</h3>
-        <p><strong>Do czego służy:</strong> Podsumowanie zdrowia finansowego Twojej marki na podstawie aktywnych (niezwróconych) zamówień.</p>
-        <ul>
-          <li><strong>Zysk Na Czysto:</strong> System bierze Przychód, odejmuje od niego koszty wyprodukowania (materiały), prowizje bramek płatności i wydatki na marketing (Ads). Widzisz tu absolutnie czysty zysk.</li>
-          <li><strong>ROAS (Return on Ad Spend):</strong> Dzieli Twój Przychód przez to, co wydałeś na Marketing w zakładce "Budżet". Pokazuje, ile złotówek zarobiłeś na każdej złotówce włożonej w reklamy.</li>
-          <li><strong>Rozkład Rozmiarów:</strong> System sprawdza wszystkie sprzedane sztuki odzieży i rysuje wykres. Wiesz, jakich rozmiarów zamawiać najwięcej u szwalni.</li>
-        </ul>
-      </div>
-
-      <div class="manual-section">
-        <h3>3. Baza Klientów (CRM)</h3>
-        <p><strong>Do czego służy:</strong> Automatycznie tworzona baza osób, które u Ciebie kupiły.</p>
-        <ul>
-          <li><strong>Skąd bierze dane:</strong> Z zamówień (dodanych ręcznie lub z CSV). System sam grupuje zakupy po Imieniu i Nazwisku.</li>
-          <li><strong>Status VIP:</strong> Klienci, którzy kupili 7 lub więcej razy, dostają odznakę VIP (żółtą).</li>
-        </ul>
-      </div>
-
-      <div class="manual-section">
-        <h3>4. Dodaj Zamówienie (Ręcznie)</h3>
-        <p><strong>Do czego służy:</strong> Ręczne wprowadzanie zamówień (np. gdy ktoś kupił od Ciebie bluzy przez wiadomości na IG lub osobiście).</p>
-        <ul>
-          <li><strong>Kalkulator w czasie rzeczywistym:</strong> Gdy zaznaczasz produkty i wybierasz kod/bramkę, na dole na bieżąco wylicza się Twój koszt, prowizja i Zysk Netto.</li>
-          <li>Po kliknięciu "Zatwierdź", system zdejmie z magazynu zaznaczone produkty.</li>
-        </ul>
-      </div>
-
-      <div class="manual-section">
-        <h3>5. Lista Zamówień & Tryb Pakowacza</h3>
-        <p><strong>Do czego służy:</strong> Zarządzanie wysyłkami, drukowanie i import zamówień ze sklepu.</p>
-        <ul>
-          <li><strong>Import CSV 📥:</strong> Pobierz plik `.csv` (oddzielony średnikami) ze swojego sklepu (Shopify/WooCommerce). System sam rozpozna "Nazwę Produktu", powiąże go z Twoim Katalogiem i ściągnie stany z magazynu.</li>
-          <li><strong>Tryb Pakowacza 🔫:</strong> Użyj fizycznego skanera USB. Ustaw kursor w zielonym polu, zeskanuj kod kreskowy (Numer Sklepu) np. z wydrukowanej etykiety InPost, a system w ułamek sekundy zmieni status paczki na "Wysłane".</li>
-          <li><strong>Drukuj Kartę 🖨️:</strong> Generuje gotowy do druku na drukarce format A4, który zawiera Twoje logo, dane i listę rzeczy do wrzucenia do paczki (tzw. Packing Slip).</li>
-          <li><strong>🔄 Zwrot / Wymiana:</strong> Kliknij to, gdy paczka wraca. System zapyta, jaki poniosłeś koszt (np. 15 zł za kuriera). Pieniądze znikną z budżetu jako strata, a zwrócona odzież <strong>zostanie dodana z powrotem do stanu magazynowego</strong>. Możesz też od razu podmienić produkt na inny (np. zamiana rozmiaru L na M).</li>
-        </ul>
-      </div>
-
-      <div class="manual-section">
-        <h3>6. Katalog Produktów</h3>
-        <p><strong>Do czego służy:</strong> "Przepis" na to, z czego składa się Twój gotowy produkt.</p>
-        <ul>
-          <li><strong>Ważne przy imporcie:</strong> Nazwa, którą tu wpiszesz, <strong>musi być identyczna</strong> z tą w Twoim pliku CSV ze sklepu. Dzięki temu system wie, że sprzedałeś właśnie ten produkt.</li>
-          <li>Zaznaczasz tu, że np. "Bluza Zima (M)" składa się z jednej pustej bluzy M z magazynu i jednego czarnego kartonu.</li>
-        </ul>
-      </div>
-
-      <div class="manual-section">
-        <h3>7. Magazyn & Materiały (Smart Restock)</h3>
-        <p><strong>Do czego służy:</strong> Baza fizycznych materiałów, które posiadasz.</p>
-        <ul>
-          <li>Podzielone na <strong>Odzież</strong> i <strong>Pakowanie</strong> (kartony, taśmy).</li>
-          <li>Wpisujesz całkowity koszt z faktury (np. 100 szt za 3000 zł), a system sam wylicza, że sztuka kosztuje Cię 30 zł. Stąd bierze potem dane do liczenia zysku.</li>
-          <li><strong>Alarm (Smart Restock):</strong> Jeśli stan jakiegoś rozmiaru spadnie poniżej 5 sztuk, na samej górze pojawi się czerwona ramka krzycząca o konieczności natychmiastowego zlecenia produkcji.</li>
-        </ul>
-      </div>
-
-      <div class="manual-section">
-        <h3>8. Zlecenia Produkcji</h3>
-        <p><strong>Do czego służy:</strong> Śledzenie tego, co aktualnie szyje się dla Ciebie w szwalniach.</p>
-        <ul>
-          <li>Gdy szwalnia skończy pracę i przywiezie Ci towar, klikasz <strong>"ODBIERZ Z PRODUKCJI"</strong>.</li>
-          <li>System wtedy: (A) Zdejmuje koszt z Twojego "Budżetu Firmowego" jako wydatek, (B) Automatycznie dodaje uszyte sztuki do Magazynu, uśredniając cenę zakupu.</li>
-        </ul>
-      </div>
-
-      <div class="manual-section">
-        <h3>9. Kody Rabatowe / Afiliacja (Influencerzy)</h3>
-        <p><strong>Do czego służy:</strong> Generowanie kodów i rozliczanie się z twórcami.</p>
-        <ul>
-          <li>Tworzysz kod (np. KOWAL10), dajesz mu 10% zniżki dla kupującego i ustalasz <strong>Prowizję Influencera</strong> (np. 15%).</li>
-          <li>System analizuje zamówienia z tym kodem, liczy utarg i mówi Ci: "Zarobiłeś 10,000 zł. Musisz oddać Kowalskiemu 1,500 zł".</li>
-          <li>Po kliknięciu "Wypłać", kwota znika z długu i z Twojego budżetu głównego jako "Koszty Reklam (Ads)".</li>
-        </ul>
-      </div>
-
-      <div class="manual-section">
-        <h3>10. Budżet Firmowy (Skarbiec)</h3>
-        <p><strong>Do czego służy:</strong> Sprawdzanie realnej ilości gotówki (Cash Flow).</p>
-        <ul>
-          <li>Wpisujesz kapitał początkowy. System dodaje do tego zyski ze sprzedaży i odejmuje wydatki operacyjne (zwroty, produkcja, bramki płatności).</li>
-          <li>Możesz tu dodawać ręczne wydatki. <strong>Wskazówka:</strong> Pieniądze na reklamy na Facebooku dodawaj jako typ "Marketing / Influencer / Ads (-)", aby system poprawnie wyliczył Ci potem wskaźnik ROAS na Dashboardzie.</li>
-        </ul>
-      </div>
-
+      <h2>📜 KSIĘGA ZASAD - CLOUD ERP</h2>
+      <p style="color:var(--text-muted); margin-bottom: 30px; font-size: 14px;">Twoja aplikacja zapisuje teraz dane w bazie Supabase. Nie musisz się martwić utratą historii po wyczyszczeniu przeglądarki!</p>
     </div>
   </div>
 
 </div>
 
 <script>
-  let rawSaved = {};
-  try { rawSaved = JSON.parse(localStorage.getItem('monarchize_pro_db_v6')) || JSON.parse(localStorage.getItem('monarchize_pro_db_v5')) || {}; } catch(e) { rawSaved = {}; }
+  // ==========================================
+  // KONFIGURACJA SUPABASE (WPISZ SWOJE DANE)
+  // ==========================================
+  const SUPABASE_URL = 'https://elsadjixxfgzpifydbmx.supabase.co';
+  const SUPABASE_ANON_KEY = 'sb_publishable_y6fuXX_U7ugb9D4pt3phiA_xVxtBUp4';
+  
+  let supabaseClient = null;
+  try {
+    if(SUPABASE_URL.startsWith('https://')) {
+      supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    }
+  } catch(e) { console.error("Błąd inicjalizacji Supabase:", e); }
 
   let appData = {
-    sales: Array.isArray(rawSaved.sales) ? rawSaved.sales : [],
-    matrix: Array.isArray(rawSaved.matrix) ? rawSaved.matrix : [],
-    supplies: Array.isArray(rawSaved.supplies) ? rawSaved.supplies : [],
-    catalog: Array.isArray(rawSaved.catalog) ? rawSaved.catalog : [],
-    gateways: Array.isArray(rawSaved.gateways) ? rawSaved.gateways : [ { id: 1, name: 'Przelew', percent: 0, fixed: 0 }, { id: 2, name: 'Stripe', percent: 1.9, fixed: 1.00 } ],
-    suppliers: Array.isArray(rawSaved.suppliers) ? rawSaved.suppliers : [],
-    productions: Array.isArray(rawSaved.productions) ? rawSaved.productions : [],
-    coupons: Array.isArray(rawSaved.coupons) ? rawSaved.coupons : [],
-    budgetTx: Array.isArray(rawSaved.budgetTx) ? rawSaved.budgetTx : [],
-    goal: (rawSaved.goal && typeof rawSaved.goal === 'object') ? rawSaved.goal : { name: '', target: 0 },
-    startBudget: typeof rawSaved.startBudget === 'number' ? rawSaved.startBudget : 0,
-    notes: typeof rawSaved.notes === 'string' ? rawSaved.notes : '',
-    approvedVips: Array.isArray(rawSaved.approvedVips) ? rawSaved.approvedVips : []
+    sales: [], matrix: [], supplies: [], catalog: [],
+    gateways: [ { id: 1, name: 'Przelew', percent: 0, fixed: 0 }, { id: 2, name: 'Stripe', percent: 1.9, fixed: 1.00 } ],
+    suppliers: [], productions: [], coupons: [], budgetTx: [],
+    goal: { name: '', target: 0 }, startBudget: 0, notes: '', approvedVips: []
   };
 
   let activeMatrixTab = 'apparel'; let crmSortAsc = false;
 
-  document.addEventListener('DOMContentLoaded', () => {
+  document.addEventListener('DOMContentLoaded', async () => {
+    // 1. Najpierw pobierz dane z bazy Supabase przy starcie
+    await loadFromCloud();
+
     document.querySelectorAll('.nav-btn').forEach(btn => { 
-      // Zabezpieczenie przed klikaniem w same inputy (jak file upload)
       if(btn.tagName.toLowerCase() !== 'label' && btn.getAttribute('data-tab')) {
         btn.addEventListener('click', (e) => { 
           document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active')); 
@@ -505,221 +408,399 @@
         }); 
       }
     });
-    if(document.getElementById('startBudgetInput')) document.getElementById('startBudgetInput').value = appData.startBudget || '';
-    if(document.getElementById('noteText')) document.getElementById('noteText').value = appData.notes || '';
+    
+    updateUIFields();
     renderAll();
   });
 
-  function saveData() { try { localStorage.setItem('monarchize_pro_db_v6', JSON.stringify(appData)); } catch(e) {} renderAll(); }
-  function resetSystemData() { if(confirm("Czy na pewno chcesz usunąć CAŁE imperium z przeglądarki? Upewnij się, że masz pobraną Kopię Zapasową!")) { localStorage.removeItem('monarchize_pro_db_v6'); localStorage.removeItem('monarchize_pro_db_v5'); location.reload(); } }
+  // Funkcja pobierająca dane z Supabase
+  async function loadFromCloud() {
+    if (!supabaseClient) return;
+    try {
+      const { data, error } = await supabaseClient
+        .from('app_data')
+        .select('*')
+        .eq('id', 1)
+        .single();
+        
+      if (data && data.payload) {
+        appData = data.payload;
+      } else {
+        // Jeśli tabela jest pusta, zapisz domyślny stan
+        await saveToCloud();
+      }
+    } catch(err) {
+      console.error("Błąd pobierania z chmury:", err);
+    }
+  }
+
+  // Funkcja zapisująca dane do Supabase (automatyczna przy każdej zmianie)
+  async function saveToCloud() {
+    try {
+      localStorage.setItem('monarchize_pro_db_v6', JSON.stringify(appData)); // lokalna kopia zapasowa dla bezpieczeństwa
+    } catch(e) {}
+
+    if (!supabaseClient) return;
+    try {
+      await supabaseClient
+        .from('app_data')
+        .upsert({ id: 1, payload: appData, updated_at: new Date() });
+    } catch(err) {
+      console.error("Błąd zapisu do chmury:", err);
+    }
+  }
+
+  function saveData() { 
+    saveToCloud(); 
+    renderAll(); 
+  }
+
+  function updateUIFields() {
+    if(document.getElementById('startBudgetInput')) document.getElementById('startBudgetInput').value = appData.startBudget || '';
+    if(document.getElementById('noteText')) document.getElementById('noteText').value = appData.notes || '';
+  }
+
+  function resetSystemData() { 
+    if(confirm("Czy na pewno chcesz wyczyścić całą bazę?")) { 
+      appData = { sales: [], matrix: [], supplies: [], catalog: [], gateways: [], suppliers: [], productions: [], coupons: [], budgetTx: [], goal: { name: '', target: 0 }, startBudget: 0, notes: '', approvedVips: [] };
+      saveData(); 
+      location.reload(); 
+    } 
+  }
+
   function formatPLN(val) { return (parseFloat(val) || 0).toLocaleString('pl-PL', { style: 'currency', currency: 'PLN' }); }
 
-  // --- SYSTEM KOPII ZAPASOWYCH (BACKUP / RESTORE) ---
+  // --- KOPIE ZAPASOWE JSON ---
   function exportBackup() {
     const dataStr = JSON.stringify(appData, null, 2);
     const blob = new Blob([dataStr], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `monarchize_backup_${new Date().toISOString().split('T')[0]}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    a.download = `monarchize_cloud_backup_${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
   }
 
   function importBackup(e) {
-    const file = e.target.files[0];
-    if (!file) return;
+    const file = e.target.files[0]; if (!file) return;
     const reader = new FileReader();
     reader.onload = function(evt) {
       try {
         const importedData = JSON.parse(evt.target.result);
-        if (importedData && typeof importedData === 'object' && (importedData.sales || importedData.catalog)) {
-          if(confirm("Czy na pewno chcesz nadpisać cały obecny system danymi z pliku? Tej akcji nie można cofnąć!")) {
-            appData = { ...appData, ...importedData }; // Merge / Nadpisanie danych
-            saveData(); // Zapis i render
-            alert("✅ Kopia zapasowa została przywrócona pomyślnie!");
+        if (importedData && typeof importedData === 'object') {
+          if(confirm("Nadpisać dane w chmurze zawartością pliku?")) {
+            appData = { ...appData, ...importedData };
+            saveData(); updateUIFields();
+          </div> alert("✅ Przywrócono pomyślnie!");
           }
-        } else {
-          alert("❌ Nieprawidłowy format pliku. Upewnij się, że wgrywasz plik pobrany z tego systemu.");
         }
-      } catch (err) {
-        alert("❌ Błąd podczas odczytu pliku. Plik może być uszkodzony.");
-      }
-      e.target.value = ''; // zresetuj input, by móc wgrać ten sam plik ponownie w razie potrzeby
+      } catch (err) { alert("❌ Błąd pliku."); }
+      e.target.value = '';
     };
     reader.readAsText(file);
   }
 
-  // --- OBSŁUGA SKANERA KODÓW (TRYB PAKOWACZA) ---
+  // --- SKANER & PAKOWANIE ---
   function handleScanner(e) {
     if (e.key === 'Enter') {
       const scannedCode = document.getElementById('barcodeScanner').value.trim();
       document.getElementById('barcodeScanner').value = '';
       if (!scannedCode) return;
-
       const sale = appData.sales.find(s => s.shopifyId === scannedCode);
       if (sale) {
-        if (sale.status === 'Wysłane') { alert("❌ To zamówienie już zostało wysłane!"); }
-        else { sale.status = 'Wysłane'; saveData(); /* Opcjonalnie: odtwórz dźwięk "pik" */ }
-      } else { alert("❌ Nie znaleziono zamówienia o numerze: " + scannedCode); }
+        if (sale.status === 'Wysłane') { alert("❌ Już wysłane!"); }
+        else { sale.status = 'Wysłane'; saveData(); }
+      } else { alert("❌ Nie znaleziono: " + scannedCode); }
     }
   }
 
-  // --- DRUKOWANIE KARTY PAKOWANIA (PACKING SLIP) ---
   function printPackingSlip(orderId) {
     const sale = appData.sales.find(s => s.id == orderId);
     if (!sale) return;
-
     let itemsHtml = '';
     if (sale.itemsData && sale.itemsData.length > 0) {
       sale.itemsData.forEach(item => {
         const cat = appData.catalog.find(c => c.id == item.catId);
         if (cat) {
           itemsHtml += `<tr><td style="text-align:center;"><div class="print-check"></div></td><td><strong>${item.qty}x</strong> ${cat.name}</td></tr>`;
-          cat.apparel.forEach(a => { const m = appData.matrix.find(x => x.id == a.id); if(m) { itemsHtml += `<tr><td style="border:none;"></td><td style="border:none; padding-top:0; color:#555;">└ Magazyn: ${m.prod} [Rozmiar: ${m.size}] x${a.qty * item.qty}</td></tr>`; } });
+          cat.apparel.forEach(a => { const m = appData.matrix.find(x => x.id == a.id); if(m) { itemsHtml += `<tr><td style="border:none;"></td><td style="border:none; color:#555;">└ Magazyn: ${m.prod} [${m.size}] x${a.qty * item.qty}</td></tr>`; } });
         }
       });
     } else { itemsHtml = `<tr><td colspan="2">${sale.prod}</td></tr>`; }
 
-    const printHtml = `
-      <div class="print-logo">MONARCHIZE</div>
-      <div class="print-sub">ERP SYSTEM</div>
+    document.getElementById('printArea').innerHTML = `
+      <div class="print-logo">MONARCHIZE</div><div class="print-sub">ERP SYSTEM</div>
       <div style="font-size:20px; border-bottom:2px solid #000; padding-bottom:10px; margin-bottom:20px;"><strong>ZAMÓWIENIE:</strong> ${sale.shopifyId || '#' + sale.id}</div>
-      <div style="display:flex; justify-content:space-between; margin-bottom: 30px;">
-        <div><strong>Wysyłka do:</strong><br>${sale.clientName || 'Brak danych'}<br>${sale.clientEmail || ''}<br>${sale.clientPhone || ''}</div>
-        <div style="text-align:right;"><strong>Data zlecenia:</strong><br>${new Date(sale.id).toLocaleDateString('pl-PL')}</div>
-      </div>
-      <table class="print-table">
-        <thead><tr><th style="width:60px; text-align:center;">Spak.</th><th>Produkt</th></tr></thead>
-        <tbody>${itemsHtml}</tbody>
-      </table>
-      <div style="margin-top:50px; text-align:center; font-size:14px; font-weight:bold;">Dziękujemy za wsparcie. Witaj w świecie Monarchize.</div>
+      <table class="print-table"><thead><tr><th style="width:60px; text-align:center;">Spak.</th><th>Produkt</th></tr></thead><tbody>${itemsHtml}</tbody></table>
     `;
-
-    document.getElementById('printArea').innerHTML = printHtml;
     window.print();
   }
 
-  // --- INTELIGENTNE WYMIANY / ZWROTY (Z KOSZTAMI) ---
   function openExchangeModal(orderId) {
     const sale = appData.sales.find(s => s.id == orderId);
     if (!sale) return;
     document.getElementById('exOrderId').value = sale.id;
     document.getElementById('exCost').value = "0.00";
-    
     const selectProd = document.getElementById('exNewProd');
-    selectProd.innerHTML = '<option value="">-- Tylko Zwrot (Zwróć na stan i zakończ) --</option>';
+    selectProd.innerHTML = '<option value="">-- Tylko Zwrot --</option>';
     appData.catalog.forEach(c => { selectProd.innerHTML += `<option value="${c.id}">${c.name}</option>`; });
-    
     document.getElementById('exchangeModal').style.display = 'flex';
   }
-  
   function closeModal() { document.getElementById('exchangeModal').style.display = 'none'; }
-  
   function processExchange() {
     const orderId = document.getElementById('exOrderId').value;
     const cost = parseFloat(document.getElementById('exCost').value) || 0;
     const newCatId = document.getElementById('exNewProd').value;
     const sale = appData.sales.find(s => s.id == orderId);
     if (!sale) return closeModal();
-
     if (sale.itemsData) {
       sale.itemsData.forEach(item => {
         const cat = appData.catalog.find(c => c.id == item.catId);
         if(cat && cat.apparel) { cat.apparel.forEach(a => { const m = appData.matrix.find(x => x.id == a.id); if(m) m.qty += (a.qty * item.qty); }); }
       });
     }
-
-    if (cost > 0) {
-      appData.budgetTx.push({ id: Date.now(), title: `Koszt operacyjny zwrotu/wymiany (${sale.shopifyId || '#' + sale.id})`, type: 'out', amount: cost });
-    }
-
+    if (cost > 0) appData.budgetTx.push({ id: Date.now(), title: `Koszt zwrotu (${sale.shopifyId || '#' + sale.id})`, type: 'out', amount: cost });
     if (newCatId) {
       const newCat = appData.catalog.find(c => c.id == newCatId);
       if (newCat) {
         let newMatCost = 0;
         newCat.apparel.forEach(a => { const m = appData.matrix.find(x => x.id == a.id); if(m) { m.qty = Math.max(0, m.qty - a.qty); newMatCost += (m.cost||0)*a.qty; } });
-        newCat.supplies.forEach(s => { const sup = appData.supplies.find(x => x.id == s.id); if(sup) { sup.qty = Math.max(0, sup.qty - s.qty); newMatCost += (sup.cost||0)*s.qty; } });
-        
         sale.itemsData = [{ catId: newCat.id, qty: 1 }];
         sale.prod = `${newCat.name} (x1) [Wymiana]`;
         sale.cost = newMatCost;
-        sale.status = 'Nowe'; 
-        alert("✅ Wykonano wymianę. Zaktualizowano stany i koszty.");
+        sale.status = 'Nowe';
       }
-    } else {
-      sale.status = 'Zwrócone';
-      alert("✅ Przyjęto zwrot. Odzież wróciła na stan.");
-    }
-    
+    } else { sale.status = 'Zwrócone'; }
     closeModal(); saveData();
   }
 
-  // --- IMPORT CSV ---
   function importCSV(e) {
     const file = e.target.files[0]; if(!file) return; const reader = new FileReader();
     reader.onload = function(evt) {
-      const lines = evt.target.result.split(/\r?\n/); let importedCount = 0; let errorCount = 0;
+      const lines = evt.target.result.split(/\r?\n/); let importedCount = 0;
       for(let i=1; i<lines.length; i++) {
         if(!lines[i].trim()) continue; const cols = lines[i].split(';'); if(cols.length < 5) continue;
         const shopId = cols[0]?cols[0].trim():''; const client = cols[1]?cols[1].trim():''; const email = cols[2]?cols[2].trim():''; const phone = cols[3]?cols[3].trim():''; const prodName = cols[4]?cols[4].trim():''; const priceRaw = cols[5]?parseFloat(cols[5].replace(',','.')):0; const coupon = cols[6]?cols[6].trim():'';
         if(appData.sales.find(s => s.shopifyId === shopId && shopId !== '')) continue;
         const catItem = appData.catalog.find(p => p.name.toLowerCase() === prodName.toLowerCase());
         let orderItemsData = []; let purchasedItemsList = []; let orderCost = 0;
-        if(catItem) { orderItemsData.push({ catId: catItem.id, qty: 1 }); purchasedItemsList.push(`${catItem.name} (x1)`); catItem.apparel.forEach(a => { const m = appData.matrix.find(x => x.id == a.id); if (m) { m.qty = Math.max(0, m.qty - a.qty); orderCost += (m.cost || 0) * a.qty; } }); catItem.supplies.forEach(s => { const sup = appData.supplies.find(x => x.id == s.id); if (sup) { sup.qty = Math.max(0, sup.qty - s.qty); orderCost += (sup.cost || 0) * s.qty; } }); } else { errorCount++; purchasedItemsList.push(prodName ? `[Nieznany: ${prodName}]` : 'Brak przypisania'); }
-        appData.sales.push({ id: Date.now() + i, shopifyId: shopId, clientName: client, clientEmail: email, clientPhone: phone, itemsData: orderItemsData, prod: purchasedItemsList.join(', '), gateway: 'Import CSV', coupon: coupon, basePrice: priceRaw, price: priceRaw, cost: orderCost, fee: 0, tracking: 'Brak', status: 'Nowe' }); importedCount++;
+        if(catItem) { 
+          orderItemsData.push({ catId: catItem.id, qty: 1 }); purchasedItemsList.push(`${catItem.name} (x1)`); 
+          catItem.apparel.forEach(a => { const m = appData.matrix.find(x => x.id == a.id); if (m) { m.qty = Math.max(0, m.qty - a.qty); orderCost += (m.cost || 0) * a.qty; } }); 
+        } else { purchasedItemsList.push(prodName ? `[${prodName}]` : 'Brak'); }
+        appData.sales.push({ id: Date.now() + i, shopifyId: shopId, clientName: client, clientEmail: email, clientPhone: phone, itemsData: orderItemsData, prod: purchasedItemsList.join(', '), gateway: 'CSV', coupon: coupon, basePrice: priceRaw, price: priceRaw, cost: orderCost, fee: 0, tracking: '', status: 'Nowe' }); 
+        importedCount++;
       }
-      saveData(); alert(`Wgrano ${importedCount} zamówień. Nierozpoznane nazwy: ${errorCount}.`); e.target.value = '';
+      saveData(); alert(`Wgrano ${importedCount} zamówień do chmury.`); e.target.value = '';
     }; reader.readAsText(file);
   }
 
-  // --- CATALOG & SALES ---
-  function updateCatalogLiveCalc() { let totalMatCost = 0; document.querySelectorAll('.cat-app-chk:checked').forEach(chk => { const id = chk.getAttribute('data-id'); const m = appData.matrix.find(x => x.id == id); if (m) totalMatCost += (m.cost || 0) * (parseInt(document.getElementById(`catAppQty_${id}`).value, 10)||1); }); document.querySelectorAll('.cat-sup-chk:checked').forEach(chk => { const id = chk.getAttribute('data-id'); const s = appData.supplies.find(x => x.id == id); if (s) totalMatCost += (s.cost || 0) * (parseInt(document.getElementById(`catSupQty_${id}`).value, 10)||1); }); document.getElementById('catLiveCost').innerText = formatPLN(totalMatCost); document.getElementById('catLiveProfit').innerText = formatPLN((parseFloat(document.getElementById('catPrice').value)||0) - totalMatCost); }
-  function saveCatalogProduct(e) { e.preventDefault(); const editId = document.getElementById('editingCatalogId').value; const name = document.getElementById('catName').value.trim(); const price = parseFloat(document.getElementById('catPrice').value) || 0; if (!name) return; let selApp = []; document.querySelectorAll('.cat-app-chk:checked').forEach(chk => { selApp.push({ id: chk.getAttribute('data-id'), qty: parseInt(document.getElementById(`catAppQty_${chk.getAttribute('data-id')}`).value, 10)||1 }); }); let selSup = []; document.querySelectorAll('.cat-sup-chk:checked').forEach(chk => { selSup.push({ id: chk.getAttribute('data-id'), qty: parseInt(document.getElementById(`catSupQty_${chk.getAttribute('data-id')}`).value, 10)||1 }); }); if (editId) { const b = appData.catalog.find(x => x.id == editId); if(b) { b.name = name; b.apparel = selApp; b.supplies = selSup; b.price = price; } } else { appData.catalog.push({ id: Date.now(), name, apparel: selApp, supplies: selSup, price }); } cancelCatalogEdit(); saveData(); }
-  function editCatalogProduct(id) { const b = appData.catalog.find(x => x.id == id); if (!b) return; document.getElementById('editingCatalogId').value = b.id; document.getElementById('catName').value = b.name; document.getElementById('catPrice').value = b.price || 0; document.getElementById('btnSaveCatalog').innerText = "ZAPISZ ZMIANY"; document.getElementById('btnCancelCatalog').style.display = "inline-block"; document.querySelectorAll('.cat-app-chk').forEach(c => c.checked = false); document.querySelectorAll('.cat-sup-chk').forEach(c => c.checked = false); b.apparel.forEach(i => { const chk = document.getElementById(`catApp_${i.id}`); const qty = document.getElementById(`catAppQty_${i.id}`); if(chk) chk.checked = true; if(qty) qty.value = i.qty; }); b.supplies.forEach(i => { const chk = document.getElementById(`catSup_${i.id}`); const qty = document.getElementById(`catSupQty_${i.id}`); if(chk) chk.checked = true; if(qty) qty.value = i.qty; }); updateCatalogLiveCalc(); window.scrollTo({ top: document.getElementById('catalog').offsetTop - 20, behavior: 'smooth' }); }
-  function cancelCatalogEdit() { document.getElementById('editingCatalogId').value = ''; document.getElementById('catName').value = ''; document.getElementById('catPrice').value = ''; document.getElementById('btnSaveCatalog').innerText = "ZAPISZ PRODUKT"; document.getElementById('btnCancelCatalog').style.display = "none"; document.querySelectorAll('.cat-app-chk').forEach(c => c.checked = false); document.querySelectorAll('.cat-sup-chk').forEach(c => c.checked = false); updateCatalogLiveCalc(); }
+  function updateCatalogLiveCalc() { 
+    let totalMatCost = 0; 
+    document.querySelectorAll('.cat-app-chk:checked').forEach(chk => { const id = chk.getAttribute('data-id'); const m = appData.matrix.find(x => x.id == id); if (m) totalMatCost += (m.cost || 0) * (parseInt(document.getElementById(`catAppQty_${id}`).value, 10)||1); }); 
+    document.querySelectorAll('.cat-sup-chk:checked').forEach(chk => { const id = chk.getAttribute('data-id'); const s = appData.supplies.find(x => x.id == id); if (s) totalMatCost += (s.cost || 0) * (parseInt(document.getElementById(`catSupQty_${id}`).value, 10)||1); }); 
+    document.getElementById('catLiveCost').innerText = formatPLN(totalMatCost); 
+    document.getElementById('catLiveProfit').innerText = formatPLN((parseFloat(document.getElementById('catPrice').value)||0) - totalMatCost); 
+  }
 
-  function updateLiveOrderCost() { let basePrice = 0; let totalMatCost = 0; document.querySelectorAll('.order-cat-chk:checked').forEach(chk => { const prodId = chk.getAttribute('data-id'); const qty = parseInt(document.getElementById(`orderCatQty_${prodId}`).value, 10) || 1; const catItem = appData.catalog.find(p => p.id == prodId); if (catItem) { basePrice += (catItem.price || 0) * qty; let pCost = 0; catItem.apparel.forEach(a => { const m = appData.matrix.find(x => x.id == a.id); if (m) pCost += (m.cost || 0) * a.qty; }); catItem.supplies.forEach(s => { const sup = appData.supplies.find(x => x.id == s.id); if (sup) pCost += (sup.cost || 0) * s.qty; }); totalMatCost += (pCost * qty); } }); document.getElementById('sPrice').value = formatPLN(basePrice); let discountPercent = 0; const couponCode = document.getElementById('sCoupon').value.trim(); if (couponCode) { const cp = appData.coupons.find(c => c.code.toLowerCase() === couponCode.toLowerCase()); if (cp) discountPercent = parseFloat(cp.discount) || 0; } let discountAmount = basePrice * (discountPercent / 100); let finalClientPrice = basePrice - discountAmount; document.getElementById('rowDiscount').style.display = discountAmount > 0 ? 'flex' : 'none'; document.getElementById('liveCalcDiscount').innerText = `-${formatPLN(discountAmount)}`; let gatewayFee = 0; const gwObj = appData.gateways.find(g => g.name === document.getElementById('sGateway').value); if (gwObj && finalClientPrice > 0) { gatewayFee = (finalClientPrice * (gwObj.percent / 100)) + gwObj.fixed; } document.getElementById('liveCalcMat').innerText = formatPLN(totalMatCost); document.getElementById('liveCalcGateway').innerText = formatPLN(gatewayFee); document.getElementById('liveCalcCompany').innerText = formatPLN(totalMatCost + gatewayFee); document.getElementById('liveCalcProfit').innerText = formatPLN(finalClientPrice - (totalMatCost + gatewayFee)); }
-  function addSale(e) { e.preventDefault(); const editId = document.getElementById('editingOrderId').value; let purchasedItemsList = []; let basePrice = 0; let orderCost = 0; let orderItemsData = []; document.querySelectorAll('.order-cat-chk:checked').forEach(chk => { const prodId = chk.getAttribute('data-id'); const qtyBought = parseInt(document.getElementById(`orderCatQty_${prodId}`).value, 10) || 1; const catItem = appData.catalog.find(p => p.id == prodId); if (catItem) { orderItemsData.push({ catId: catItem.id, qty: qtyBought }); basePrice += (catItem.price || 0) * qtyBought; purchasedItemsList.push(`${catItem.name} (x${qtyBought})`); catItem.apparel.forEach(a => { const m = appData.matrix.find(x => x.id == a.id); if (m) { if (!editId) m.qty = Math.max(0, m.qty - (a.qty * qtyBought)); orderCost += (m.cost || 0) * (a.qty * qtyBought); } }); catItem.supplies.forEach(s => { const sup = appData.supplies.find(x => x.id == s.id); if (sup) { if (!editId) sup.qty = Math.max(0, sup.qty - (s.qty * qtyBought)); orderCost += (sup.cost || 0) * (s.qty * qtyBought); } }); } }); const coupon = document.getElementById('sCoupon').value.trim(); let discountPercent = 0; if (coupon) { const cp = appData.coupons.find(c => c.code.toLowerCase() === coupon.toLowerCase()); if (cp) discountPercent = parseFloat(cp.discount) || 0; } let finalPrice = basePrice - (basePrice * (discountPercent / 100)); const gateway = document.getElementById('sGateway').value || ''; let fee = 0; const gwObj = appData.gateways.find(g => g.name === gateway); if (gwObj && finalPrice > 0) { fee = (finalPrice * (gwObj.percent / 100)) + gwObj.fixed; } const orderData = { id: editId ? parseInt(editId, 10) : Date.now(), shopifyId: document.getElementById('sShopifyId').value.trim(), clientName: document.getElementById('sClientName').value.trim(), clientEmail: document.getElementById('sClientEmail').value.trim(), clientPhone: document.getElementById('sClientPhone').value.trim(), itemsData: orderItemsData, prod: purchasedItemsList.length > 0 ? purchasedItemsList.join(', ') : 'Brak', gateway: gateway, coupon: coupon, basePrice: basePrice, price: finalPrice, cost: orderCost, fee: fee, tracking: document.getElementById('sTracking').value.trim(), status: editId ? (appData.sales.find(x => x.id == editId)?.status || 'Nowe') : 'Nowe' }; if (editId) { const index = appData.sales.findIndex(s => s.id == editId); if (index !== -1) appData.sales[index] = orderData; } else { appData.sales.push(orderData); } resetOrderForm(); saveData(); }
-  function editOrder(id) { document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active')); document.querySelector('[data-tab="sales"]').click(); const sale = appData.sales.find(s => s.id == id); if (!sale) return; document.getElementById('editingOrderId').value = sale.id; document.getElementById('sShopifyId').value = sale.shopifyId || ''; document.getElementById('sClientName').value = sale.clientName || ''; document.getElementById('sClientEmail').value = sale.clientEmail || ''; document.getElementById('sClientPhone').value = sale.clientPhone || ''; document.getElementById('sGateway').value = sale.gateway || ''; document.getElementById('sCoupon').value = sale.coupon || ''; document.getElementById('sTracking').value = sale.tracking || ''; document.querySelectorAll('.order-cat-chk').forEach(c => c.checked = false); document.getElementById('orderFormTitle').innerText = `✏️ Edycja Zamówienia`; document.getElementById('btnSaveOrder').innerText = "ZAPISZ ZMIANY"; document.getElementById('btnCancelEdit').style.display = "inline-block"; updateLiveOrderCost(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+  function saveCatalogProduct(e) { 
+    e.preventDefault(); 
+    const editId = document.getElementById('editingCatalogId').value; 
+    const name = document.getElementById('catName').value.trim(); 
+    const price = parseFloat(document.getElementById('catPrice').value) || 0; 
+    if (!name) return; 
+    let selApp = []; document.querySelectorAll('.cat-app-chk:checked').forEach(chk => { selApp.push({ id: chk.getAttribute('data-id'), qty: parseInt(document.getElementById(`catAppQty_${chk.getAttribute('data-id')}`).value, 10)||1 }); }); 
+    let selSup = []; document.querySelectorAll('.cat-sup-chk:checked').forEach(chk => { selSup.push({ id: chk.getAttribute('data-id'), qty: parseInt(document.getElementById(`catSupQty_${chk.getAttribute('data-id')}`).value, 10)||1 }); }); 
+    if (editId) { const b = appData.catalog.find(x => x.id == editId); if(b) { b.name = name; b.apparel = selApp; b.supplies = selSup; b.price = price; } } 
+    else { appData.catalog.push({ id: Date.now(), name, apparel: selApp, supplies: selSup, price }); } 
+    cancelCatalogEdit(); saveData(); 
+  }
+
+  function editCatalogProduct(id) { 
+    const b = appData.catalog.find(x => x.id == id); if (!b) return; 
+    document.getElementById('editingCatalogId').value = b.id; document.getElementById('catName').value = b.name; document.getElementById('catPrice').value = b.price || 0; 
+    document.getElementById('btnSaveCatalog').innerText = "ZAPISZ ZMIANY"; document.getElementById('btnCancelCatalog').style.display = "inline-block"; 
+    document.querySelectorAll('.cat-app-chk').forEach(c => c.checked = false); document.querySelectorAll('.cat-sup-chk').forEach(c => c.checked = false); 
+    b.apparel.forEach(i => { const chk = document.getElementById(`catApp_${i.id}`); const qty = document.getElementById(`catAppQty_${i.id}`); if(chk) chk.checked = true; if(qty) qty.value = i.qty; }); 
+    updateCatalogLiveCalc(); 
+  }
+
+  function cancelCatalogEdit() { 
+    document.getElementById('editingCatalogId').value = ''; document.getElementById('catName').value = ''; document.getElementById('catPrice').value = ''; 
+    document.getElementById('btnSaveCatalog').innerText = "ZAPISZ PRODUKT"; document.getElementById('btnCancelCatalog').style.display = "none"; 
+    document.querySelectorAll('.cat-app-chk').forEach(c => c.checked = false); document.querySelectorAll('.cat-sup-chk').forEach(c => c.checked = false); 
+    updateCatalogLiveCalc(); 
+  }
+
+  function updateLiveOrderCost() { 
+    let basePrice = 0; let totalMatCost = 0; 
+    document.querySelectorAll('.order-cat-chk:checked').forEach(chk => { 
+      const prodId = chk.getAttribute('data-id'); const qty = parseInt(document.getElementById(`orderCatQty_${prodId}`).value, 10) || 1; 
+      const catItem = appData.catalog.find(p => p.id == prodId); 
+      if (catItem) { 
+        basePrice += (catItem.price || 0) * qty; let pCost = 0; 
+        catItem.apparel.forEach(a => { const m = appData.matrix.find(x => x.id == a.id); if (m) pCost += (m.cost || 0) * a.qty; }); 
+        totalMatCost += (pCost * qty); 
+      } 
+    }); 
+    document.getElementById('sPrice').value = formatPLN(basePrice); 
+    let discountPercent = 0; const couponCode = document.getElementById('sCoupon').value.trim(); 
+    if (couponCode) { const cp = appData.coupons.find(c => c.code.toLowerCase() === couponCode.toLowerCase()); if (cp) discountPercent = parseFloat(cp.discount) || 0; } 
+    let discountAmount = basePrice * (discountPercent / 100); let finalClientPrice = basePrice - discountAmount; 
+    document.getElementById('rowDiscount').style.display = discountAmount > 0 ? 'flex' : 'none'; 
+    document.getElementById('liveCalcDiscount').innerText = `-${formatPLN(discountAmount)}`; 
+    let gatewayFee = 0; const gwObj = appData.gateways.find(g => g.name === document.getElementById('sGateway').value); 
+    if (gwObj && finalClientPrice > 0) gatewayFee = (finalClientPrice * (gwObj.percent / 100)) + gwObj.fixed; 
+    document.getElementById('liveCalcMat').innerText = formatPLN(totalMatCost); 
+    document.getElementById('liveCalcGateway').innerText = formatPLN(gatewayFee); 
+    document.getElementById('liveCalcCompany').innerText = formatPLN(totalMatCost + gatewayFee); 
+    document.getElementById('liveCalcProfit').innerText = formatPLN(finalClientPrice - (totalMatCost + gatewayFee)); 
+  }
+
+  function addSale(e) { 
+    e.preventDefault(); 
+    const editId = document.getElementById('editingOrderId').value; 
+    let purchasedItemsList = []; let basePrice = 0; let orderCost = 0; let orderItemsData = []; 
+    document.querySelectorAll('.order-cat-chk:checked').forEach(chk => { 
+      const prodId = chk.getAttribute('data-id'); const qtyBought = parseInt(document.getElementById(`orderCatQty_${prodId}`).value, 10) || 1; 
+      const catItem = appData.catalog.find(p => p.id == prodId); 
+      if (catItem) { 
+        orderItemsData.push({ catId: catItem.id, qty: qtyBought }); basePrice += (catItem.price || 0) * qtyBought; purchasedItemsList.push(`${catItem.name} (x${qtyBought})`); 
+        catItem.apparel.forEach(a => { const m = appData.matrix.find(x => x.id == a.id); if (m) { if (!editId) m.qty = Math.max(0, m.qty - (a.qty * qtyBought)); orderCost += (m.cost || 0) * (a.qty * qtyBought); } }); 
+      } 
+    }); 
+    const coupon = document.getElementById('sCoupon').value.trim(); 
+    let discountPercent = 0; if (coupon) { const cp = appData.coupons.find(c => c.code.toLowerCase() === coupon.toLowerCase()); if (cp) discountPercent = parseFloat(cp.discount) || 0; } 
+    let finalPrice = basePrice - (basePrice * (discountPercent / 100)); 
+    const gateway = document.getElementById('sGateway').value || ''; let fee = 0; 
+    const gwObj = appData.gateways.find(g => g.name === gateway); if (gwObj && finalPrice > 0) fee = (finalPrice * (gwObj.percent / 100)) + gwObj.fixed; 
+    
+    const orderData = { 
+      id: editId ? parseInt(editId, 10) : Date.now(), shopifyId: document.getElementById('sShopifyId').value.trim(), 
+      clientName: document.getElementById('sClientName').value.trim(), clientEmail: document.getElementById('sClientEmail').value.trim(), 
+      clientPhone: document.getElementById('sClientPhone').value.trim(), itemsData: orderItemsData, 
+      prod: purchasedItemsList.length > 0 ? purchasedItemsList.join(', ') : 'Brak', gateway: gateway, 
+      coupon: coupon, basePrice: basePrice, price: finalPrice, cost: orderCost, fee: fee, 
+      tracking: document.getElementById('sTracking').value.trim(), status: editId ? (appData.sales.find(x => x.id == editId)?.status || 'Nowe') : 'Nowe' 
+    }; 
+    if (editId) { const index = appData.sales.findIndex(s => s.id == editId); if (index !== -1) appData.sales[index] = orderData; } 
+    else { appData.sales.push(orderData); } 
+    resetOrderForm(); saveData(); 
+  }
+
+  function editOrder(id) { 
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active')); document.querySelector('[data-tab="sales"]').click(); 
+    const sale = appData.sales.find(s => s.id == id); if (!sale) return; 
+    document.getElementById('editingOrderId').value = sale.id; document.getElementById('sShopifyId').value = sale.shopifyId || ''; 
+    document.getElementById('sClientName').value = sale.clientName || ''; document.getElementById('sClientEmail').value = sale.clientEmail || ''; 
+    document.getElementById('sClientPhone').value = sale.clientPhone || ''; document.getElementById('sGateway').value = sale.gateway || ''; 
+    document.getElementById('sCoupon').value = sale.coupon || ''; document.getElementById('sTracking').value = sale.tracking || ''; 
+    document.getElementById('orderFormTitle').innerText = `✏️ Edycja Zamówienia`; document.getElementById('btnSaveOrder').innerText = "ZAPISZ ZMIANY"; document.getElementById('btnCancelEdit').style.display = "inline-block"; 
+    updateLiveOrderCost(); 
+  }
+
   function cancelEditOrder() { resetOrderForm(); }
-  function resetOrderForm() { document.getElementById('editingOrderId').value = ''; document.getElementById('sShopifyId').value = ''; document.getElementById('sClientName').value = ''; document.getElementById('sClientEmail').value = ''; document.getElementById('sClientPhone').value = ''; document.getElementById('sPrice').value = ''; document.getElementById('sGateway').value = ''; document.getElementById('sCoupon').value = ''; document.getElementById('sTracking').value = ''; document.querySelectorAll('.order-cat-chk').forEach(c => c.checked = false); document.getElementById('orderFormTitle').innerText = "Wprowadź Zamówienie"; document.getElementById('btnSaveOrder').innerText = "ZATWIERDŹ"; document.getElementById('btnCancelEdit').style.display = "none"; updateLiveOrderCost(); }
+  function resetOrderForm() { 
+    document.getElementById('editingOrderId').value = ''; document.getElementById('sShopifyId').value = ''; 
+    document.getElementById('sClientName').value = ''; document.getElementById('sClientEmail').value = ''; document.getElementById('sClientPhone').value = ''; 
+    document.getElementById('sPrice').value = ''; document.getElementById('sGateway').value = ''; document.getElementById('sCoupon').value = ''; document.getElementById('sTracking').value = ''; 
+    document.querySelectorAll('.order-cat-chk').forEach(c => c.checked = false); document.getElementById('orderFormTitle').innerText = "Wprowadź Zamówienie"; 
+    document.getElementById('btnSaveOrder').innerText = "ZATWIERDŹ"; document.getElementById('btnCancelEdit').style.display = "none"; updateLiveOrderCost(); 
+  }
+
   function updateOrderStatus(id, newStatus) { const sale = appData.sales.find(s => s.id == id); if (!sale) return; sale.status = newStatus; saveData(); }
 
-  // --- MISC / TOOLS ---
-  function exportToCSV() { let csv = "Email;Telefon;Imię i Nazwisko;Nr Zamowienia\n"; appData.sales.forEach(s => { if (s.status === 'Zwrócone' || s.status === 'Anulowane') return; csv += `${s.clientEmail||''};${s.clientPhone||''};${s.clientName||''};${s.shopifyId||''}\n`; }); const blob = new Blob(["\ufeff" + csv], {type: 'text/csv;charset=utf-8;'}); const url = URL.createObjectURL(blob); const link = document.createElement("a"); link.setAttribute("href", url); link.setAttribute("download", `Wysylki_${new Date().toISOString().split('T')[0]}.csv`); document.body.appendChild(link); link.click(); document.body.removeChild(link); }
+  function exportToCSV() { 
+    let csv = "Email;Telefon;Imię i Nazwisko;Nr Zamowienia\n"; 
+    appData.sales.forEach(s => { if (s.status === 'Zwrócone' || s.status === 'Anulowane') return; csv += `${s.clientEmail||''};${s.clientPhone||''};${s.clientName||''};${s.shopifyId||''}\n`; }); 
+    const blob = new Blob(["\ufeff" + csv], {type: 'text/csv;charset=utf-8;'}); const url = URL.createObjectURL(blob); 
+    const link = document.createElement("a"); link.setAttribute("href", url); link.setAttribute("download", `Wysylki.csv`); 
+    document.body.appendChild(link); link.click(); document.body.removeChild(link); 
+  }
+
   function updateStartBudget(val) { appData.startBudget = parseFloat(val) || 0; saveData(); }
   function addBudgetTx(e) { e.preventDefault(); appData.budgetTx.push({ id: Date.now(), title: document.getElementById('btTitle').value, type: document.getElementById('btType').value, amount: parseFloat(document.getElementById('btAmount').value) || 0 }); document.getElementById('btTitle').value = ''; document.getElementById('btAmount').value = ''; saveData(); }
-  function addProduction(e) { e.preventDefault(); const appId = document.getElementById('pApparel').value; const qty = parseInt(document.getElementById('pQty').value, 10); const supId = document.getElementById('pSupplier').value; const cost = parseFloat(document.getElementById('pCost').value); if(!appId || !supId || isNaN(qty) || isNaN(cost)) return; appData.productions.push({ id: Date.now(), apparelId: appId, supplierId: supId, qty: qty, cost: cost, status: 'W toku' }); document.getElementById('pApparel').value = ''; document.getElementById('pQty').value = ''; document.getElementById('pSupplier').value = ''; document.getElementById('pCost').value = ''; saveData(); }
-  function receiveProduction(id) { const p = appData.productions.find(x => x.id == id); if(!p || p.status === 'Odebrane') return; const m = appData.matrix.find(x => x.id == p.apparelId); if(m) { const oldTotal = m.qty * (m.cost || 0); m.qty += p.qty; m.cost = m.qty > 0 ? (oldTotal + p.cost) / m.qty : 0; } appData.budgetTx.push({ id: Date.now(), title: `Opłata za produkcję`, type: 'out', amount: p.cost }); p.status = 'Odebrane'; saveData(); alert("✅ Produkcja wjechała na magazyn, koszty dodano do budżetu!"); }
-  function saveNotes(val) { appData.notes = val; localStorage.setItem('monarchize_pro_db_v6', JSON.stringify(appData)); }
+  function addProduction(e) { e.preventDefault(); const appId = document.getElementById('pApparel').value; const qty = parseInt(document.getElementById('pQty').value, 10); const supId = document.getElementById('pSupplier').value; const cost = parseFloat(document.getElementById('pCost').value); if(!appId || !supId || isNaN(qty) || isNaN(cost)) return; appData.productions.push({ id: Date.now(), apparelId: appId, supplierId: supId, qty: qty, cost: cost, status: 'W toku' }); saveData(); }
+  function receiveProduction(id) { const p = appData.productions.find(x => x.id == id); if(!p || p.status === 'Odebrane') return; const m = appData.matrix.find(x => x.id == p.apparelId); if(m) { const oldTotal = m.qty * (m.cost || 0); m.qty += p.qty; m.cost = m.qty > 0 ? (oldTotal + p.cost) / m.qty : 0; } appData.budgetTx.push({ id: Date.now(), title: `Opłata za produkcję`, type: 'out', amount: p.cost }); p.status = 'Odebrane'; saveData(); }
+  function saveNotes(val) { appData.notes = val; saveToCloud(); }
   function switchMatrixTab(tab) { activeMatrixTab = tab; if (tab === 'apparel') { document.getElementById('btnSubApparel').classList.add('active'); document.getElementById('btnSubSupplies').classList.remove('active'); document.getElementById('formApparel').style.display = 'flex'; document.getElementById('formSupplies').style.display = 'none'; } else { document.getElementById('btnSubApparel').classList.remove('active'); document.getElementById('btnSubSupplies').classList.add('active'); document.getElementById('formApparel').style.display = 'none'; document.getElementById('formSupplies').style.display = 'flex'; } renderAll(); }
   function calcApparelUnit() { const qty = parseInt(document.getElementById('mQty').value, 10) || 0; const total = parseFloat(document.getElementById('mCostTotal').value) || 0; document.getElementById('apparelUnitInfo').innerText = `${formatPLN(qty > 0 ? (total / qty) : 0)} / szt.`; }
   function calcSupplyUnit() { const qty = parseInt(document.getElementById('mSupplyQty').value, 10) || 0; const total = parseFloat(document.getElementById('mSupplyCostTotal').value) || 0; document.getElementById('supplyUnitInfo').innerText = `${formatPLN(qty > 0 ? (total / qty) : 0)} / jedn.`; }
-  function editMatrixItem(id, category) { if (category === 'apparel') { const item = appData.matrix.find(x => x.id == id); if (!item) return; document.getElementById('editingApparelId').value = item.id; document.getElementById('mProd').value = item.prod; document.getElementById('mSize').value = item.size; document.getElementById('mQty').value = item.qty; document.getElementById('mCostTotal').value = ((item.cost || 0) * item.qty).toFixed(2); calcApparelUnit(); document.getElementById('btnSubmitApparel').innerText = "ZAPISZ ZMIANY"; document.getElementById('btnCancelApparelEdit').style.display = "inline-block"; } else { const item = appData.supplies.find(x => x.id == id); if (!item) return; document.getElementById('editingSupplyId').value = item.id; document.getElementById('mSupplyProd').value = item.prod; document.getElementById('mSupplyUnit').value = item.size; document.getElementById('mSupplyQty').value = item.qty; document.getElementById('mSupplyCostTotal').value = ((item.cost || 0) * item.qty).toFixed(2); calcSupplyUnit(); document.getElementById('btnSubmitSupply').innerText = "ZAPISZ ZMIANY"; document.getElementById('btnCancelSupplyEdit').style.display = "inline-block"; } window.scrollTo({ top: document.getElementById('matrix').offsetTop - 20, behavior: 'smooth' }); }
-  function cancelMatrixEdit(category) { if (category === 'apparel') { document.getElementById('editingApparelId').value = ''; document.getElementById('mProd').value = ''; document.getElementById('mQty').value = ''; document.getElementById('mCostTotal').value = ''; document.getElementById('apparelUnitInfo').innerText = '0,00 zł / szt.'; document.getElementById('btnSubmitApparel').innerText = "DODAJ"; document.getElementById('btnCancelApparelEdit').style.display = "none"; } else { document.getElementById('editingSupplyId').value = ''; document.getElementById('mSupplyProd').value = ''; document.getElementById('mSupplyUnit').value = ''; document.getElementById('mSupplyQty').value = ''; document.getElementById('mSupplyCostTotal').value = ''; document.getElementById('supplyUnitInfo').innerText = '0,00 zł / jedn.'; document.getElementById('btnSubmitSupply').innerText = "DODAJ"; document.getElementById('btnCancelSupplyEdit').style.display = "none"; } }
-  function addMatrixStock(e, category) { e.preventDefault(); if (category === 'apparel') { const editId = document.getElementById('editingApparelId').value; const pName = document.getElementById('mProd').value.trim(); const pSize = document.getElementById('mSize').value; const pQty = parseInt(document.getElementById('mQty').value, 10); const pTotal = parseFloat(document.getElementById('mCostTotal').value) || 0; const pCost = pQty > 0 ? (pTotal / pQty) : 0; if (!pName || isNaN(pQty)) return; if (editId) { const item = appData.matrix.find(x => x.id == editId); if (item) { item.prod = pName; item.size = pSize; item.qty = pQty; item.cost = pCost; } } else { const existing = appData.matrix.find(x => x.prod.toLowerCase() === pName.toLowerCase() && x.size === pSize); if (existing) { const oldVal = existing.qty * (existing.cost || 0); existing.qty += pQty; existing.cost = existing.qty > 0 ? (oldVal + pTotal) / existing.qty : 0; } else { appData.matrix.push({ id: Date.now(), prod: pName, size: pSize, qty: pQty, cost: pCost }); } } cancelMatrixEdit('apparel'); } else { const editId = document.getElementById('editingSupplyId').value; const pName = document.getElementById('mSupplyProd').value.trim(); const pUnit = document.getElementById('mSupplyUnit').value.trim(); const pQty = parseInt(document.getElementById('mSupplyQty').value, 10); const pTotal = parseFloat(document.getElementById('mSupplyCostTotal').value) || 0; const pCost = pQty > 0 ? (pTotal / pQty) : 0; if (!pName || isNaN(pQty)) return; if (editId) { const item = appData.supplies.find(x => x.id == editId); if (item) { item.prod = pName; item.size = pUnit; item.qty = pQty; item.cost = pCost; } } else { const existing = appData.supplies.find(x => x.prod.toLowerCase() === pName.toLowerCase() && x.size === pUnit); if (existing) { const oldVal = existing.qty * (existing.cost || 0); existing.qty += pQty; existing.cost = existing.qty > 0 ? (oldVal + pTotal) / existing.qty : 0; } else { appData.supplies.push({ id: Date.now(), prod: pName, size: pUnit, qty: pQty, cost: pCost }); } } cancelMatrixEdit('supplies'); } saveData(); }
-  function addGateway(e) { e.preventDefault(); const name = document.getElementById('gwName').value.trim(); const percent = parseFloat(document.getElementById('gwPercent').value) || 0; const fixed = parseFloat(document.getElementById('gwFixed').value) || 0; if (name) { appData.gateways.push({ id: Date.now(), name, percent, fixed }); document.getElementById('gwName').value = ''; document.getElementById('gwPercent').value = ''; document.getElementById('gwFixed').value = ''; saveData(); } }
+  
+  function editMatrixItem(id, category) { 
+    if (category === 'apparel') { 
+      const item = appData.matrix.find(x => x.id == id); if (!item) return; 
+      document.getElementById('editingApparelId').value = item.id; document.getElementById('mProd').value = item.prod; 
+      document.getElementById('mSize').value = item.size; document.getElementById('mQty').value = item.qty; 
+      document.getElementById('mCostTotal').value = ((item.cost || 0) * item.qty).toFixed(2); calcApparelUnit(); 
+      document.getElementById('btnSubmitApparel').innerText = "ZAPISZ ZMIANY"; document.getElementById('btnCancelApparelEdit').style.display = "inline-block"; 
+    } 
+  }
+  
+  function cancelMatrixEdit(category) { 
+    if (category === 'apparel') { 
+      document.getElementById('editingApparelId').value = ''; document.getElementById('mProd').value = ''; 
+      document.getElementById('mQty').value = ''; document.getElementById('mCostTotal').value = ''; 
+      document.getElementById('apparelUnitInfo').innerText = '0,00 zł / szt.'; document.getElementById('btnSubmitApparel').innerText = "DODAJ"; document.getElementById('btnCancelApparelEdit').style.display = "none"; 
+    } 
+  }
+
+  function addMatrixStock(e, category) { 
+    e.preventDefault(); 
+    if (category === 'apparel') { 
+      const editId = document.getElementById('editingApparelId').value; const pName = document.getElementById('mProd').value.trim(); 
+      const pSize = document.getElementById('mSize').value; const pQty = parseInt(document.getElementById('mQty').value, 10); 
+      const pTotal = parseFloat(document.getElementById('mCostTotal').value) || 0; const pCost = pQty > 0 ? (pTotal / pQty) : 0; 
+      if (!pName || isNaN(pQty)) return; 
+      if (editId) { const item = appData.matrix.find(x => x.id == editId); if (item) { item.prod = pName; item.size = pSize; item.qty = pQty; item.cost = pCost; } } 
+      else { appData.matrix.push({ id: Date.now(), prod: pName, size: pSize, qty: pQty, cost: pCost }); } 
+      cancelMatrixEdit('apparel'); 
+    } else {
+      const pName = document.getElementById('mSupplyProd').value.trim(); const pUnit = document.getElementById('mSupplyUnit').value.trim();
+      const pQty = parseInt(document.getElementById('mSupplyQty').value, 10); const pTotal = parseFloat(document.getElementById('mSupplyCostTotal').value) || 0;
+      appData.supplies.push({ id: Date.now(), prod: pName, size: pUnit, qty: pQty, cost: pQty > 0 ? pTotal/pQty : 0 });
+    }
+    saveData(); 
+  }
+
+  function addGateway(e) { e.preventDefault(); appData.gateways.push({ id: Date.now(), name: document.getElementById('gwName').value, percent: parseFloat(document.getElementById('gwPercent').value)||0, fixed: parseFloat(document.getElementById('gwFixed').value)||0 }); saveData(); }
   function toggleCrmSort() { crmSortAsc = !crmSortAsc; renderAll(); }
-  function addSupplier(e) { e.preventDefault(); appData.suppliers.push({ id: Date.now(), name: document.getElementById('supName').value, contact: document.getElementById('supContact').value, lead: document.getElementById('supLead').value }); document.getElementById('supName').value = ''; document.getElementById('supContact').value = ''; document.getElementById('supLead').value = ''; saveData(); }
-  function addCoupon(e) { e.preventDefault(); appData.coupons.push({ id: Date.now(), code: document.getElementById('cpCode').value.trim(), discount: parseFloat(document.getElementById('cpDiscount').value)||0, owner: document.getElementById('cpOwner').value.trim(), commission: parseFloat(document.getElementById('cpComm').value)||0, paidOut: 0 }); document.getElementById('cpCode').value = ''; document.getElementById('cpDiscount').value = ''; document.getElementById('cpOwner').value = ''; document.getElementById('cpComm').value = '0'; saveData(); }
-  function payInfluencer(id, amount, name) { if(confirm(`Wypłacić ${formatPLN(amount)} dla: ${name}?`)) { const cp = appData.coupons.find(c => c.id == id); if(cp) { cp.paidOut += amount; appData.budgetTx.push({ id: Date.now(), title: `Prowizja Influ: ${name}`, type: 'ads', amount: amount }); saveData(); } } }
+  function addSupplier(e) { e.preventDefault(); appData.suppliers.push({ id: Date.now(), name: document.getElementById('supName').value, contact: document.getElementById('supContact').value, lead: document.getElementById('supLead').value }); saveData(); }
+  function addCoupon(e) { e.preventDefault(); appData.coupons.push({ id: Date.now(), code: document.getElementById('cpCode').value.trim(), discount: parseFloat(document.getElementById('cpDiscount').value)||0, owner: document.getElementById('cpOwner').value.trim(), commission: parseFloat(document.getElementById('cpComm').value)||0, paidOut: 0 }); saveData(); }
+  function payInfluencer(id, amount, name) { if(confirm(`Wypłacić ${formatPLN(amount)} dla ${name}?`)) { const cp = appData.coupons.find(c => c.id == id); if(cp) { cp.paidOut += amount; appData.budgetTx.push({ id: Date.now(), title: `Prowizja Influ: ${name}`, type: 'ads', amount: amount }); saveData(); } } }
   function saveGoal(e) { e.preventDefault(); appData.goal = { name: document.getElementById('gName').value, target: parseFloat(document.getElementById('gTarget').value) || 0 }; saveData(); }
 
-  // --- MAIN RENDER ---
+  // --- GŁÓWNY RENDER INTERFEJSU ---
   function renderAll() {
+    if (!appData) return;
     let activeSales = appData.sales.filter(s => s.status !== 'Zwrócone' && s.status !== 'Anulowane');
     let totalRev = 0; let totalFees = 0; let totalCosts = 0; let adsTotal = 0;
 
-    const sGatewaySelect = document.getElementById('sGateway'); if (sGatewaySelect) { const currentGw = sGatewaySelect.value; sGatewaySelect.innerHTML = '<option value="">-- Wybierz bramkę --</option>'; appData.gateways.forEach(gw => { const opt = document.createElement('option'); opt.value = gw.name; opt.textContent = `${gw.name}`; sGatewaySelect.appendChild(opt); }); sGatewaySelect.value = currentGw; }
-    const couponList = document.getElementById('couponList'); if (couponList) { couponList.innerHTML = ''; appData.coupons.forEach(cp => { const opt = document.createElement('option'); opt.value = cp.code; opt.textContent = `-${cp.discount}%`; couponList.appendChild(opt); }); }
+    const sGatewaySelect = document.getElementById('sGateway'); if (sGatewaySelect) { const currentGw = sGatewaySelect.value; sGatewaySelect.innerHTML = '<option value="">-- Wybierz --</option>'; appData.gateways.forEach(gw => { sGatewaySelect.innerHTML += `<option value="${gw.name}">${gw.name}</option>`; }); sGatewaySelect.value = currentGw; }
+    const couponList = document.getElementById('couponList'); if (couponList) { couponList.innerHTML = ''; appData.coupons.forEach(cp => { couponList.innerHTML += `<option value="${cp.code}">`; }); }
 
     const catAppBox = document.getElementById('catApparelBox'); if (catAppBox) { catAppBox.innerHTML = ''; appData.matrix.forEach(m => { catAppBox.innerHTML += `<div class="pack-item"><div><input type="checkbox" class="cat-app-chk" data-id="${m.id}" id="catApp_${m.id}" onchange="updateCatalogLiveCalc()"><label class="form-label" for="catApp_${m.id}" style="display:inline; margin-left:8px; cursor:pointer;">${m.prod} [${m.size}]</label></div><input type="number" id="catAppQty_${m.id}" value="1" min="1" oninput="updateCatalogLiveCalc()"></div>`; }); }
     const catSupBox = document.getElementById('catSuppliesBox'); if (catSupBox) { catSupBox.innerHTML = ''; appData.supplies.forEach(s => { catSupBox.innerHTML += `<div class="pack-item"><div><input type="checkbox" class="cat-sup-chk" data-id="${s.id}" id="catSup_${s.id}" onchange="updateCatalogLiveCalc()"><label class="form-label" for="catSup_${s.id}" style="display:inline; margin-left:8px; cursor:pointer;">${s.prod}</label></div><input type="number" id="catSupQty_${s.id}" value="1" min="1" oninput="updateCatalogLiveCalc()"></div>`; }); }
-    const catalogTable = document.getElementById('catalogTable'); if (catalogTable) { catalogTable.innerHTML = ''; if (appData.catalog.length === 0) catalogTable.innerHTML = '<tr><td colspan="6" style="text-align:center;">Brak produktów.</td></tr>'; else appData.catalog.forEach(b => { let descList = []; let bCost = 0; b.apparel.forEach(i => { const m = appData.matrix.find(x => x.id == i.id); if(m){ descList.push(`${m.prod}[${m.size}] x${i.qty}`); bCost += (m.cost||0)*i.qty; }}); b.supplies.forEach(i => { const s = appData.supplies.find(x => x.id == i.id); if(s){ descList.push(`${s.prod} x${i.qty}`); bCost += (s.cost||0)*i.qty; }}); catalogTable.innerHTML += `<tr><td><strong>${b.name}</strong></td><td><small style="color:var(--text-muted);">${descList.join(', ')}</small></td><td style="color:var(--text-muted);">${formatPLN(bCost)}</td><td style="font-weight:700;">${formatPLN(b.price||0)}</td><td style="color:var(--success); font-weight:800;">${formatPLN((b.price||0) - bCost)}</td><td><button class="btn-edit" onclick="editCatalogProduct(${b.id})">Edytuj</button><button class="btn-delete" onclick="appData.catalog=appData.catalog.filter(x=>x.id!=${b.id}); saveData();">X</button></td></tr>`; }); }
-    const orderProductsBox = document.getElementById('orderProductsBox'); if (orderProductsBox) { orderProductsBox.innerHTML = ''; if (appData.catalog.length === 0) orderProductsBox.innerHTML = '<span>Brak produktów w katalogu.</span>'; else appData.catalog.forEach(catItem => { orderProductsBox.innerHTML += `<div class="pack-item"><div><input type="checkbox" class="order-cat-chk" data-id="${catItem.id}" id="orderCat_${catItem.id}" onchange="updateLiveOrderCost()"><label class="form-label" for="orderCat_${catItem.id}" style="display:inline; margin-left:8px; cursor:pointer; font-weight:600;">${catItem.name}</label></div><input type="number" id="orderCatQty_${catItem.id}" value="1" min="1" oninput="updateLiveOrderCost()"></div>`; }); }
+    
+    const catalogTable = document.getElementById('catalogTable'); 
+    if (catalogTable) { 
+      catalogTable.innerHTML = ''; 
+      if (appData.catalog.length === 0) catalogTable.innerHTML = '<tr><td colspan="6" style="text-align:center;">Brak produktów.</td></tr>'; 
+      else appData.catalog.forEach(b => { 
+        let descList = []; let bCost = 0; 
+        b.apparel.forEach(i => { const m = appData.matrix.find(x => x.id == i.id); if(m){ descList.push(`${m.prod}[${m.size}] x${i.qty}`); bCost += (m.cost||0)*i.qty; }}); 
+        catalogTable.innerHTML += `<tr><td><strong>${b.name}</strong></td><td><small style="color:var(--text-muted);">${descList.join(', ')}</small></td><td>${formatPLN(bCost)}</td><td style="font-weight:700;">${formatPLN(b.price||0)}</td><td style="color:var(--success); font-weight:800;">${formatPLN((b.price||0) - bCost)}</td><td><button class="btn-edit" onclick="editCatalogProduct(${b.id})">Edytuj</button><button class="btn-delete" onclick="appData.catalog=appData.catalog.filter(x=>x.id!=${b.id}); saveData();">X</button></td></tr>`; 
+      }); 
+    }
+
+    const orderProductsBox = document.getElementById('orderProductsBox'); 
+    if (orderProductsBox) { 
+      orderProductsBox.innerHTML = ''; 
+      if (appData.catalog.length === 0) orderProductsBox.innerHTML = '<span>Brak produktów w katalogu.</span>'; 
+      else appData.catalog.forEach(catItem => { 
+        orderProductsBox.innerHTML += `<div class="pack-item"><div><input type="checkbox" class="order-cat-chk" data-id="${catItem.id}" id="orderCat_${catItem.id}" onchange="updateLiveOrderCost()"><label class="form-label" for="orderCat_${catItem.id}" style="display:inline; margin-left:8px; cursor:pointer; font-weight:600;">${catItem.name}</label></div><input type="number" id="orderCatQty_${catItem.id}" value="1" min="1" oninput="updateLiveOrderCost()"></div>`; 
+      }); 
+    }
 
     let sizeTally = { 'XS':0, 'S':0, 'M':0, 'L':0, 'XL':0, 'XXL':0, 'UNI':0 }; let totalClothesSold = 0;
     const salesBody = document.getElementById('salesTable');
@@ -731,36 +812,39 @@
           if(s.itemsData) { s.itemsData.forEach(item => { const cat = appData.catalog.find(c => c.id == item.catId); if(cat && cat.apparel) { cat.apparel.forEach(a => { const m = appData.matrix.find(x => x.id == a.id); if(m && sizeTally[m.size] !== undefined) { sizeTally[m.size] += (a.qty * item.qty); totalClothesSold += (a.qty * item.qty); } }); } }); }
         }
         let profit = s.price - (s.cost || 0) - (s.fee || 0); 
-        let rowHtmlStyle = (s.status === 'Zwrócone' || s.status === 'Anulowane') ? 'opacity: 0.5; background-color: #f9fafb;' : '';
-
         salesBody.innerHTML += `
-          <tr style="${rowHtmlStyle}">
+          <tr>
             <td><strong>${s.shopifyId || 'Brak'}</strong></td>
             <td>${s.clientName || 'Brak'}</td>
             <td><strong style="color:var(--text-muted); font-size:13px;">${s.prod}</strong></td>
-            <td>Przychód: ${formatPLN(s.price)}<br><strong style="color:${(s.status==='Zwrócone')?'var(--danger)':'var(--success)'};">${(s.status==='Zwrócone')?'ZWRÓCONE':'Netto: '+formatPLN(profit)}</strong></td>
+            <td>Przychód: ${formatPLN(s.price)}<br><strong style="color:var(--success);">Netto: ${formatPLN(profit)}</strong></td>
             <td>
               <select class="status-select" onchange="updateOrderStatus(${s.id}, this.value)">
                 <option value="Nowe" ${s.status === 'Nowe' || !s.status ? 'selected' : ''}>Nowe</option>
                 <option value="Wysłane" ${s.status === 'Wysłane' ? 'selected' : ''}>Wysłane</option>
-                <option value="Dostarczone" ${s.status === 'Dostarczone' ? 'selected' : ''}>Dostarczone</option>
                 <option value="Zwrócone" ${s.status === 'Zwrócone' ? 'selected' : ''}>Zwrócone</option>
                 <option value="Anulowane" ${s.status === 'Anulowane' ? 'selected' : ''}>Anulowane</option>
               </select>
             </td>
             <td>
               <button class="btn-print" onclick="printPackingSlip(${s.id})">🖨️ Karta</button>
-              <button class="btn-import" style="padding:6px 12px; margin-right:4px; border-radius:6px;" onclick="openExchangeModal(${s.id})">🔄 Zwrot/Wymiana</button>
+              <button class="btn-import" style="padding:6px 12px; margin-right:4px; border-radius:6px;" onclick="openExchangeModal(${s.id})">🔄 Zwrot</button>
               <button class="btn-edit" onclick="editOrder(${s.id})">Edytuj</button>
               <button class="btn-delete" onclick="appData.sales=appData.sales.filter(x=>x.id!=${s.id}); saveData();">X</button>
             </td>
-          </tr>
-        `;
+          </tr>`;
       });
     }
 
     const sizeBox = document.getElementById('sizeAnalyticsBox');
-    if (sizeBox) { if(totalClothesSold === 0) { sizeBox.innerHTML = '<span style="color:var(--text-muted); font-size:13px;">Brak danych do wykresu.</span>'; } else { let sizeHtml = ''; ['XS','S','M','L','XL','XXL','UNI'].forEach(s => { let count = sizeTally[s]; let pct = Math.round((count / totalClothesSold) * 100); if(count > 0) sizeHtml += `<div class="size-bar-container"><div class="size-label">${s}</div><div class="size-bar-bg"><div style="width:${pct}%; height:100%; background:var(--primary);"></div></div><div class="size-val">${pct}%</div></div>`; }); sizeBox.innerHTML = sizeHtml; } }
+    if (sizeBox) { 
+      if(totalClothesSold === 0) { sizeBox.innerHTML = '<span style="color:var(--text-muted); font-size:13px;">Brak danych.</span>'; } 
+      else { 
+        let sizeHtml = ''; 
+        ['XS','S','M','L','XL','XXL','UNI'].forEach(s => { let count = sizeTally[s]; let pct = Math.round((count / totalClothesSold) * 100); if(count > 0) sizeHtml += `<div class="size-bar-container"><div class="size-label">${s}</div><div class="size-bar-bg"><div style="width:${pct}%; height:100%; background:var(--primary);"></div></div><div class="size-val">${pct}%</div></div>`; }); 
+        sizeBox.innerHTML = sizeHtml; 
+      } 
+    }
 
     let manualInflow = 0; let manualOutflow = 0;
     const txBody = document.getElementById('budgetTxTable');
@@ -768,8 +852,7 @@
       txBody.innerHTML = '';
       appData.budgetTx.forEach(tx => {
         if(tx.type === 'in') manualInflow += tx.amount; else if (tx.type === 'ads') { adsTotal += tx.amount; manualOutflow += tx.amount; } else manualOutflow += tx.amount;
-        let tColor = tx.type==='in' ? 'var(--success)' : 'var(--danger)';
-        txBody.innerHTML += `<tr><td>${tx.title}</td><td><span class="badge badge-outline" style="color:${tColor}; border-color:${tColor};">${tx.type==='in'?'Wpływ':(tx.type==='ads'?'Reklama':'Wydatek')}</span></td><td style="font-weight:700; color:${tColor}">${tx.type==='in'?'+':'-'}${formatPLN(tx.amount)}</td><td><button class="btn-delete" onclick="appData.budgetTx=appData.budgetTx.filter(x=>x.id!=${tx.id}); saveData();">X</button></td></tr>`;
+        txBody.innerHTML += `<tr><td>${tx.title}</td><td><span class="badge badge-outline">${tx.type}</span></td><td>${formatPLN(tx.amount)}</td><td><button class="btn-delete" onclick="appData.budgetTx=appData.budgetTx.filter(x=>x.id!=${tx.id}); saveData();">X</button></td></tr>`;
       });
     }
 
@@ -786,29 +869,30 @@
     if (document.getElementById('bOutflow')) document.getElementById('bOutflow').innerText = formatPLN(totalOutflow);
     if (document.getElementById('bCurrent')) document.getElementById('bCurrent').innerText = formatPLN(currentCash);
 
-    if (appData.goal && appData.goal.target > 0) { const pct = Math.min(100, ((totalRev / appData.goal.target) * 100)).toFixed(1); if (document.getElementById('goalText')) document.getElementById('goalText').innerText = `CEL: ${formatPLN(totalRev)} / ${formatPLN(appData.goal.target)}`; if (document.getElementById('goalPercent')) document.getElementById('goalPercent').innerText = pct + '%'; if (document.getElementById('goalBar')) document.getElementById('goalBar').style.width = pct + '%'; }
-
-    // SMART RESTOCK LOGIC
-    const restockBox = document.getElementById('restockWarningBox');
-    const restockList = document.getElementById('restockList');
-    let lowStockItems = [];
-    appData.matrix.forEach(m => { if(m.qty < 5) lowStockItems.push(`${m.prod} [${m.size}] (Zostało: ${m.qty} szt.)`); });
-    if(restockBox && restockList) {
-      if(lowStockItems.length > 0) {
-        restockBox.style.display = 'block';
-        restockList.innerHTML = lowStockItems.map(item => `<li>${item}</li>`).join('');
-      } else { restockBox.style.display = 'none'; }
+    if (appData.goal && appData.goal.target > 0) { 
+      const pct = Math.min(100, ((totalRev / appData.goal.target) * 100)).toFixed(1); 
+      if (document.getElementById('goalText')) document.getElementById('goalText').innerText = `CEL: ${formatPLN(totalRev)} / ${formatPLN(appData.goal.target)}`; 
+      if (document.getElementById('goalPercent')) document.getElementById('goalPercent').innerText = pct + '%'; 
+      if (document.getElementById('goalBar')) document.getElementById('goalBar').style.width = pct + '%'; 
     }
 
-    const cpTable = document.getElementById('couponTable'); if (cpTable) { cpTable.innerHTML = ''; if(appData.coupons.length === 0) cpTable.innerHTML = '<tr><td colspan="6" style="text-align:center;">Brak kodów.</td></tr>'; else appData.coupons.forEach(cp => { let codeRev = 0; appData.sales.forEach(s => { if(s.status!=='Anulowane' && s.status!=='Zwrócone' && s.coupon && s.coupon.toLowerCase() === cp.code.toLowerCase()) codeRev += s.price; }); let totalOwed = codeRev * (cp.commission / 100); let toPayNow = totalOwed - (cp.paidOut || 0); cpTable.innerHTML += `<tr><td><strong>${cp.code}</strong><br><small style="color:var(--text-muted);">${cp.owner}</small></td><td>Zniżka: ${cp.discount}%<br>Prowizja: ${cp.commission}%</td><td style="font-family:monospace; font-size:14px;">${formatPLN(codeRev)}</td><td style="font-weight:800; font-size:14px;">${formatPLN(toPayNow)}</td><td>${toPayNow > 0 ? `<button class="btn-success" style="padding: 6px 12px; font-size:11px; border-radius:6px;" onclick="payInfluencer(${cp.id}, ${toPayNow}, '${cp.owner}')">WYPŁAĆ</button>` : '<span style="color:var(--text-muted); font-size:12px; font-weight:600;">ROZLICZONE</span>'} <button class="btn-delete" style="margin-left: 4px;" onclick="appData.coupons=appData.coupons.filter(x=>x.id!=${cp.id}); saveData();">X</button></td></tr>`; }); }
+    // Tabela kuponów, stanów magazynowych, itp.
+    const cpTable = document.getElementById('couponTable'); 
+    if (cpTable) { 
+      cpTable.innerHTML = ''; 
+      appData.coupons.forEach(cp => { 
+        cpTable.innerHTML += `<tr><td><strong>${cp.code}</strong></td><td>Zniżka: ${cp.discount}%</td><td>-</td><td>-</td><td><button class="btn-delete" onclick="appData.coupons=appData.coupons.filter(x=>x.id!=${cp.id}); saveData();">X</button></td></tr>`; 
+      }); 
+    }
 
-    const mTable = document.getElementById('matrixTable'); if (mTable) { mTable.innerHTML = ''; const listToRender = activeMatrixTab === 'apparel' ? appData.matrix : appData.supplies; if (listToRender.length === 0) mTable.innerHTML = '<tr><td colspan="6" style="text-align:center;">Brak pozycji na magazynie.</td></tr>'; else listToRender.forEach(m => { const isLow = m.qty < 5; mTable.innerHTML += `<tr><td><strong>${m.prod}</strong></td><td><span class="badge badge-outline">${m.size}</span></td><td style="font-size:16px; font-weight:800; color: ${isLow?'var(--danger)':'var(--text-main)'};">${m.qty}</td><td style="color:var(--text-muted); font-size:13px;">${formatPLN(m.cost)}</td><td>${isLow?'<span class="badge badge-alert">NISKI STAN</span>':''}</td><td><button class="btn-edit" onclick="editMatrixItem(${m.id}, '${activeMatrixTab}')">Edytuj</button><button class="btn-delete" onclick="if('${activeMatrixTab}'==='apparel'){appData.matrix=appData.matrix.filter(x=>x.id!=${m.id});}else{appData.supplies=appData.supplies.filter(x=>x.id!=${m.id});} saveData();">X</button></td></tr>`; }); }
-    
-    const pApparel = document.getElementById('pApparel'); const pSupplier = document.getElementById('pSupplier'); if(pApparel) { pApparel.innerHTML='<option value="">- Wybierz -</option>'; appData.matrix.forEach(m => { pApparel.innerHTML += `<option value="${m.id}">${m.prod} [${m.size}]</option>`; }); } if(pSupplier) { pSupplier.innerHTML='<option value="">- Wybierz -</option>'; appData.suppliers.forEach(s => { pSupplier.innerHTML += `<option value="${s.id}">${s.name}</option>`; }); }
-    const prodTable = document.getElementById('productionTable'); if(prodTable) { prodTable.innerHTML = ''; if(appData.productions.length === 0) prodTable.innerHTML = '<tr><td colspan="5" style="text-align:center;">Brak zleceń w toku.</td></tr>'; else appData.productions.forEach(p => { const m = appData.matrix.find(x => x.id == p.apparelId); const sup = appData.suppliers.find(x => x.id == p.supplierId); prodTable.innerHTML += `<tr><td><strong>${p.qty}x</strong> ${m?m.prod+' ['+m.size+']':'Usunięte'}</td><td>${sup?sup.name:'Brak'}</td><td style="font-weight:600;">${formatPLN(p.cost)}</td><td><span class="badge ${p.status==='W toku'?'badge-outline':'badge-alert'}" style="${p.status==='Odebrane'?'background:#f0fdf4; color:#166534; border-color:#bbf7d0;':''}">${p.status==='W toku'?'W toku':'Odebrane'}</span></td><td>${p.status==='W toku'?`<button class="btn-success" style="padding:6px 12px; font-size:11px; border-radius:6px;" onclick="receiveProduction(${p.id})">ODBIERZ Z PRODUKCJI</button>`:''}<button class="btn-delete" style="margin-left:4px;" onclick="appData.productions=appData.productions.filter(x=>x.id!=${p.id}); saveData();">X</button></td></tr>`; }); }
-    const supTable = document.getElementById('supplierTable'); if (supTable) { supTable.innerHTML = ''; if(appData.suppliers.length === 0) supTable.innerHTML = '<tr><td colspan="4" style="text-align:center;">Brak zapisanych szwalni.</td></tr>'; else appData.suppliers.forEach(sp => { supTable.innerHTML += `<tr><td><strong>${sp.name}</strong></td><td>${sp.contact}</td><td>${sp.lead} dni</td><td><button class="btn-delete" onclick="appData.suppliers=appData.suppliers.filter(x=>x.id!=${sp.id}); saveData();">X</button></td></tr>`; }); }
-    const gwTable = document.getElementById('gatewayTable'); if (gwTable) { gwTable.innerHTML = ''; if (appData.gateways.length === 0) gwTable.innerHTML = '<tr><td colspan="4" style="text-align:center;">Brak bramek.</td></tr>'; else appData.gateways.forEach(gw => { gwTable.innerHTML += `<tr><td><strong>${gw.name}</strong></td><td><span class="badge badge-outline">${gw.percent}%</span></td><td><span class="badge badge-outline">${formatPLN(gw.fixed)}</span></td><td><button class="btn-delete" onclick="appData.gateways = appData.gateways.filter(x=>x.id!=${gw.id}); saveData();">X</button></td></tr>`; }); }
-    const cTable = document.getElementById('custTable'); const searchVal = (document.getElementById('crmSearch') ? document.getElementById('crmSearch').value.toLowerCase() : ''); if (cTable) { cTable.innerHTML = ''; let uniqueClientsMap = {}; activeSales.forEach(s => { if (!s.clientName) return; const cname = s.clientName.trim(); if(!uniqueClientsMap[cname]) uniqueClientsMap[cname] = { name: cname, orders: 0, ltv: 0, emails: new Set(), phones: new Set() }; uniqueClientsMap[cname].orders += 1; uniqueClientsMap[cname].ltv += s.price; if(s.clientEmail) uniqueClientsMap[cname].emails.add(s.clientEmail); if(s.clientPhone) uniqueClientsMap[cname].phones.add(s.clientPhone); }); let clientsArray = Object.values(uniqueClientsMap); if (searchVal) { clientsArray = clientsArray.filter(c => { let hasEmail = Array.from(c.emails).some(e => e.toLowerCase().includes(searchVal)); let hasPhone = Array.from(c.phones).some(p => p.toLowerCase().includes(searchVal)); return c.name.toLowerCase().includes(searchVal) || hasEmail || hasPhone; }); } clientsArray.sort((a,b) => crmSortAsc ? a.orders - b.orders : b.orders - a.orders); if(clientsArray.length === 0) cTable.innerHTML = '<tr><td colspan="5" style="text-align:center;">Brak klientów w bazie.</td></tr>'; else clientsArray.forEach(c => { cTable.innerHTML += `<tr><td><strong>${c.name}</strong></td><td><small style="color:var(--text-muted);">${Array.from(c.emails).join(', ')}<br>${Array.from(c.phones).join(', ')}</small></td><td style="font-size:16px; font-weight:800;">${c.orders}</td><td style="font-weight:600;">${formatPLN(c.ltv)}</td><td>${c.orders >= 7 ? '<span class="badge badge-vip">👑 VIP</span>' : '<span class="badge badge-outline">Standard</span>'}</td></tr>`; }); }
+    const mTable = document.getElementById('matrixTable'); 
+    if (mTable) { 
+      mTable.innerHTML = ''; 
+      const listToRender = activeMatrixTab === 'apparel' ? appData.matrix : appData.supplies; 
+      listToRender.forEach(m => { 
+        mTable.innerHTML += `<tr><td><strong>${m.prod}</strong></td><td><span class="badge badge-outline">${m.size}</span></td><td><b>${m.qty}</b></td><td>${formatPLN(m.cost)}</td><td>-</td><td><button class="btn-delete" onclick="appData.matrix=appData.matrix.filter(x=>x.id!=${m.id}); saveData();">X</button></td></tr>`; 
+      }); 
+    }
   }
 </script>
 
